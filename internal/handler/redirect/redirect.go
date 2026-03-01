@@ -24,13 +24,13 @@ import (
 */
 func New(urls repository.URLCollection) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		urlId := req.PathValue("id")
-		if urlId == "" {
+		urlID := req.PathValue("id")
+		if urlID == "" {
 			http.Error(res, "empty id", http.StatusBadRequest)
 			return
 		}
 
-		url, exists := urls.FindByID(urlId)
+		url, exists := urls.FindByID(urlID)
 		if !exists {
 			http.NotFound(res, req)
 			return
