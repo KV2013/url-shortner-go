@@ -59,7 +59,6 @@ func TestNewRedirectHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.request, nil)
 			res := httptest.NewRecorder()
 			h := NewRedirectHandler(tt.urls)
-			// h(res, req)
 
 			mux := http.NewServeMux()
 			mux.HandleFunc("GET /{id}", h) // например, "GET /foo/{id}"
@@ -68,6 +67,7 @@ func TestNewRedirectHandler(t *testing.T) {
 			mux.ServeHTTP(res, req)
 
 			result := res.Result()
+			defer result.Body.Close()
 
 			assert.Equal(t, result.StatusCode, tt.want.statusCode, "request:"+tt.request)
 			assert.Equal(t, result.Header.Get("Content-Type"), tt.want.contentType)

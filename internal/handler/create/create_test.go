@@ -75,6 +75,7 @@ func TestNew(t *testing.T) {
 			h(res, req)
 
 			result := res.Result()
+			defer result.Body.Close()
 
 			assert.Equal(t, result.StatusCode, tt.want.statusCode)
 			assert.Equal(t, result.Header.Get("Content-Type"), tt.want.contentType)
