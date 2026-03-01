@@ -7,35 +7,35 @@ import (
 )
 
 type URLCollection struct {
-	urlsByID map[string]model.URL
-	urlByURL map[string]model.URL
+	UrlsByID map[string]model.URL
+	UrlByURL map[string]model.URL
 }
 
 func NewURLCollection() URLCollection {
 	return URLCollection{
-		urlsByID: make(map[string]model.URL),
-		urlByURL: make(map[string]model.URL),
+		UrlsByID: make(map[string]model.URL),
+		UrlByURL: make(map[string]model.URL),
 	}
 }
 
 func (uc *URLCollection) FindByURL(url string) (model.URL, bool) {
-	found, exists := uc.urlByURL[url]
+	found, exists := uc.UrlByURL[url]
 	return found, exists
 }
 func (uc *URLCollection) FindByID(id string) (model.URL, bool) {
-	found, exists := uc.urlsByID[id]
+	found, exists := uc.UrlsByID[id]
 	return found, exists
 }
 
 func (uc *URLCollection) Set(url model.URL) error {
-	if _, exists := uc.urlByURL[url.Original]; exists {
+	if _, exists := uc.UrlByURL[url.Original]; exists {
 		return fmt.Errorf("already exists")
 	}
-	if _, exists := uc.urlsByID[url.Short]; exists {
+	if _, exists := uc.UrlsByID[url.Short]; exists {
 		return fmt.Errorf("already exists")
 	}
-	uc.urlsByID[url.Short] = url
-	uc.urlByURL[url.Original] = url
+	uc.UrlsByID[url.Short] = url
+	uc.UrlByURL[url.Original] = url
 
 	return nil
 }
