@@ -17,7 +17,7 @@ func main() {
 
 	BaseURL := "http://localhost:8080/"
 	mux.HandleFunc(`POST /`, create.New(urls, BaseURL))
-	mux.HandleFunc(`GET /{id}`, redirect.New(urls))
+	mux.HandleFunc(`GET /{id}`, redirect.NewRedirectHandler(urls))
 	http.ListenAndServe(":8080", mux)
 
 	log.Println("server zapuchen")

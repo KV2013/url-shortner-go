@@ -22,7 +22,7 @@ import (
 	HTTP/1.1 307 Temporary Redirect
 	Location: https://practicum.yandex.ru/
 */
-func New(urls repository.URLCollection) http.HandlerFunc {
+func NewRedirectHandler(urls repository.URLCollection) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		urlID := req.PathValue("id")
 		if urlID == "" {
@@ -36,6 +36,7 @@ func New(urls repository.URLCollection) http.HandlerFunc {
 			return
 		}
 
+		res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		http.Redirect(res, req, url.Original, http.StatusTemporaryRedirect)
 	}
 }
