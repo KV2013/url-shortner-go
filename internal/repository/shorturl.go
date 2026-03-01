@@ -6,36 +6,36 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/model"
 )
 
-type UrlCollection struct {
-	urlsById map[string]model.Url
-	urlByURL map[string]model.Url
+type URLCollection struct {
+	urlsById map[string]model.URL
+	urlByURL map[string]model.URL
 }
 
-func NewUrlCollection() UrlCollection {
-	return UrlCollection{
-		urlsById: make(map[string]model.Url),
-		urlByURL: make(map[string]model.Url),
+func NewURLCollection() URLCollection {
+	return URLCollection{
+		urlsById: make(map[string]model.URL),
+		urlByURL: make(map[string]model.URL),
 	}
 }
 
-func (this *UrlCollection) FindByUrl(url string) (model.Url, bool) {
-	found, exists := this.urlByURL[url]
+func (uc *URLCollection) FindByURL(url string) (model.URL, bool) {
+	found, exists := uc.urlByURL[url]
 	return found, exists
 }
-func (this *UrlCollection) FindById(id string) (model.Url, bool) {
-	found, exists := this.urlsById[id]
+func (uc *URLCollection) FindByID(id string) (model.URL, bool) {
+	found, exists := uc.urlsById[id]
 	return found, exists
 }
 
-func (this *UrlCollection) Set(url model.Url) error {
-	if _, exists := this.urlByURL[url.Original]; exists {
+func (uc *URLCollection) Set(url model.URL) error {
+	if _, exists := uc.urlByURL[url.Original]; exists {
 		return fmt.Errorf("already exists")
 	}
-	if _, exists := this.urlsById[url.Short]; exists {
+	if _, exists := uc.urlsById[url.Short]; exists {
 		return fmt.Errorf("already exists")
 	}
-	this.urlsById[url.Short] = url
-	this.urlByURL[url.Original] = url
+	uc.urlsById[url.Short] = url
+	uc.urlByURL[url.Original] = url
 
 	return nil
 }

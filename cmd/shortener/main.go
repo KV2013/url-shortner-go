@@ -13,7 +13,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	urls := repository.NewUrlCollection()
+	urls := repository.NewURLCollection()
 
 	BaseURL := "http://localhost:8080/"
 	mux.HandleFunc(`POST /`, create.New(urls, BaseURL))

@@ -31,7 +31,7 @@ text/plain и возвращает ответ с кодом 201 и сокращ�
 
 		http://localhost:8080/EwHXdJfB
 */
-func New(urls repository.UrlCollection, baseUrl string) http.HandlerFunc {
+func New(urls repository.URLCollection, baseURL string) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		reqBody, err := io.ReadAll(req.Body)
@@ -40,26 +40,26 @@ func New(urls repository.UrlCollection, baseUrl string) http.HandlerFunc {
 			return
 		}
 
-		reqUrl := string(reqBody)
-		if reqUrl == "" {
+		reqURL := string(reqBody)
+		if reqURL == "" {
 			http.Error(res, "no url provided", http.StatusBadRequest)
 			return
 		}
 
-		_, exists := urls.FindByUrl(reqUrl)
+		_, exists := urls.FindByURL(reqURL)
 		if exists {
 			http.Error(res, "Url already exists", http.StatusBadRequest)
 			return
 		}
 
-		urlId := random.NewRandomString(10)
-		urls.Set(model.Url{
-			Original: reqUrl,
-			Short:    urlId,
+		urlID := random.NewRandomString(10)
+		urls.Set(model.URL{
+			Original: reqURL,
+			Short:    urlID,
 		})
 
 		res.Header().Set("Content-Type", "text/plain")
 		res.WriteHeader(http.StatusCreated)
-		io.WriteString(res, baseUrl+urlId)
+		io.WriteString(res, baseURL+urlID)
 	}
 }
