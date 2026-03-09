@@ -4,23 +4,24 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/KV2013/url-shortner-go/internal/handler/create"
-	"github.com/KV2013/url-shortner-go/internal/handler/redirect"
-	"github.com/KV2013/url-shortner-go/internal/repository"
+	"github.com/KV2013/url-shortner-go/internal/handler"
+	"github.com/KV2013/url-shortner-go/internal/repository/in_memory"
+	"github.com/KV2013/url-shortner-go/internal/router"
+	"github.com/KV2013/url-shortner-go/internal/service"
 )
 
 func main() {
 
-	mux := http.NewServeMux()
+	repo := in_memory.NewRepository()
+	urlService := service.NewURLService(repo)
+	handler := handler.New(urlService)
+	mux := router.Init(handler)
 
-	urls := repository.NewURLCollection()
+	log.Println("server zapuchen na portu 8080")
 
-	BaseURL := "http://localhost:8080/"
-	mux.HandleFunc(`POST /`, create.New(urls, BaseURL))
-	mux.HandleFunc(`GET /{id}`, redirect.NewRedirectHandler(urls))
-	http.ListenAndServe(":8080", mux)
-
-	log.Println("server zapuchen")
 	err := http.ListenAndServe(`:8080`, mux)
-	log.Fatal(err)
+
+	if err != nil {
+		log.Fatal("Ne udalos zapustit server ", err)
+	}
 }
