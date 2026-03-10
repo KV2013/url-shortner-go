@@ -1,16 +1,17 @@
 package router
 
 import (
-	"net/http"
-
 	"github.com/KV2013/url-shortner-go/internal/handler"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-func Init(handler *handler.URLHandler) *http.ServeMux {
+func Init(handler *handler.URLHandler) *chi.Mux {
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(`POST /`, handler.Create)
-	mux.HandleFunc(`GET /{id}`, handler.Redirect)
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Post("/", handler.Create)
+	r.Get("/{id}", handler.Redirect)
 
-	return mux
+	return r
 }
