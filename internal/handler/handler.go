@@ -2,7 +2,6 @@ package handler
 
 import (
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
@@ -47,8 +46,6 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	}
 
 	shortURL := h.config.BaseURL + "/" + storedURL.Short
-
-	log.Printf("cfg base url: %s shortUrl: %s config:%s\n", h.config.BaseURL, shortURL, h.config)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)

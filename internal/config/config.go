@@ -9,7 +9,7 @@ func NewConfig() (*Config, error) {
 	parseFlags()
 
 	if flagBaseURL == "" {
-		flagBaseURL = flagRunAddr
+		flagBaseURL = "http://" + flagRunAddr
 	}
 
 	return &Config{

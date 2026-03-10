@@ -42,12 +42,12 @@ func TestCreate(t *testing.T) {
 			},
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
-				BaseURL:       "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusCreated,
-				response:    "localhost:8080/abc123", // ожидаемый короткий URL
+				response:    "http://localhost:8080/abc123", // ожидаемый короткий URL
 			},
 		},
 		{
@@ -74,6 +74,7 @@ func TestCreate(t *testing.T) {
 			url:     "http://example.com",
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 			saveURLError:  errors.New("failed to save"),
 			expectedError: true,
@@ -87,6 +88,7 @@ func TestCreate(t *testing.T) {
 			url:     "",
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 			expectedError: true,
 			want: want{
@@ -157,6 +159,7 @@ func TestRedirect(t *testing.T) {
 			expectedCode:       http.StatusTemporaryRedirect,
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 		},
 		{
@@ -167,6 +170,7 @@ func TestRedirect(t *testing.T) {
 			expectedCode:       http.StatusNotFound,
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 		},
 		{
@@ -177,6 +181,7 @@ func TestRedirect(t *testing.T) {
 			expectedCode:       http.StatusBadRequest,
 			config: &config.Config{
 				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
 			},
 		},
 	}
