@@ -5,14 +5,14 @@ import (
 	"net/http"
 
 	"github.com/KV2013/url-shortner-go/internal/handler"
-	"github.com/KV2013/url-shortner-go/internal/repository/in_memory"
+	"github.com/KV2013/url-shortner-go/internal/repository/inmemory"
 	"github.com/KV2013/url-shortner-go/internal/router"
 	"github.com/KV2013/url-shortner-go/internal/service"
 )
 
 func main() {
 
-	repo := in_memory.NewRepository()
+	repo := inmemory.NewRepository()
 	urlService := service.NewURLService(repo)
 	handler := handler.New(urlService)
 	mux := router.Init(handler)
