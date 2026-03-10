@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler/mocks"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/magiconair/properties/assert"
@@ -82,7 +83,8 @@ func TestCreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService)
+			config := config.NewConfig()
+			handler := New(mockService, config)
 
 			body := strings.NewReader(tt.url)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -155,7 +157,8 @@ func TestRedirect(t *testing.T) {
 					Return(tt.foundURL, tt.exists)
 			}
 
-			handler := New(mockService)
+			config := config.NewConfig()
+			handler := New(mockService, config)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
 )
 
@@ -16,11 +17,13 @@ type URLService interface {
 
 type URLHandler struct {
 	urlService URLService
+	config     *config.Config
 }
 
-func New(urlService URLService) *URLHandler {
+func New(urlService URLService, config *config.Config) *URLHandler {
 	return &URLHandler{
 		urlService: urlService,
+		config:     config,
 	}
 }
 
@@ -42,16 +45,18 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Ne udalos sohranit url "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	scheme := "http"
-	if req.TLS != nil {
-		scheme = "https"
-	}
 
-	shortURL := &url.URL{
-		Scheme: scheme,
-		Host:   req.Host,
-		Path:   storedURL.Short,
+	shortURL, err := url.Parse(h.config.BaseURL)
+	if err != nil {
+		http.Error(res, "Ne udalos sobrat url "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	shortURL, err = shortURL.Parse("/" + storedURL.Short)
+	if err != nil {
+		http.Error(res, "Ne udalos sobrat url "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// log.Default().Printf("cfg base url: %s shortUrl: %s config:%s\n", h.config.BaseURL, shortURL.String(), h.config)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
