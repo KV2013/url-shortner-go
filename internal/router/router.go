@@ -9,8 +9,8 @@ import (
 func Init(handler *handler.URLHandler) *http.ServeMux {
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(`POST /`, handler.NewCreate())
-	mux.HandleFunc(`GET /{id}`, handler.NewRedirect())
+	mux.HandleFunc(`POST /`, handler.Create)
+	mux.HandleFunc(`GET /{id}`, handler.Redirect)
 
 	return mux
 }
