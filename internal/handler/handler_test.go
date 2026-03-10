@@ -33,22 +33,22 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:    "201 Created - successful save",
-			request: "https://localhost:8080",
-			url:     "https://example.com",
+			request: "http://localhost:8080",
+			url:     "http://example.com",
 			storedURL: &model.URL{
 				Short:    "abc123",
-				Original: "https://example.com",
+				Original: "http://example.com",
 			},
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusCreated,
-				response:    "https://localhost:8080/abc123", // ожидаемый короткий URL
+				response:    "http://localhost:8080/abc123", // ожидаемый короткий URL
 			},
 		},
 		{
 			name:          "400 Bad Request - save error",
-			request:       "https://localhost:8080",
-			url:           "https://example.com",
+			request:       "http://localhost:8080",
+			url:           "http://example.com",
 			saveURLError:  errors.New("failed to save"),
 			expectedError: true,
 			want: want{
@@ -57,7 +57,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name:          "400 Bad Request - empty URL",
-			request:       "https://localhost:8080",
+			request:       "http://localhost:8080",
 			url:           "",
 			expectedError: true,
 			want: want{
@@ -66,6 +66,10 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
+	config := &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "localhost:8080",
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -83,7 +87,6 @@ func TestCreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			config := config.NewConfig()
 			handler := New(mockService, config)
 
 			body := strings.NewReader(tt.url)
@@ -143,6 +146,10 @@ func TestRedirect(t *testing.T) {
 		},
 	}
 
+	config := &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "localhost:8080",
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Создаём контроллер моков
@@ -157,7 +164,6 @@ func TestRedirect(t *testing.T) {
 					Return(tt.foundURL, tt.exists)
 			}
 
-			config := config.NewConfig()
 			handler := New(mockService, config)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)

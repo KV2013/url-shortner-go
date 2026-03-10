@@ -5,15 +5,15 @@ type Config struct {
 	BaseURL       string
 }
 
-func NewConfig() *Config {
+func NewConfig() (*Config, error) {
 	parseFlags()
 
 	if flagBaseURL == "" {
-		flagBaseURL = "http://" + flagRunAddr
+		flagBaseURL = flagRunAddr
 	}
 
 	return &Config{
 		ServerAddress: flagRunAddr,
 		BaseURL:       flagBaseURL,
-	}
+	}, nil
 }

@@ -13,7 +13,10 @@ import (
 
 func main() {
 
-	config := config.NewConfig()
+	config, cfgErr := config.NewConfig()
+	if cfgErr != nil {
+		log.Fatal("Oshibka pri sborke konfiga")
+	}
 
 	repo := inmemory.NewRepository()
 	urlService := service.NewURLService(repo)

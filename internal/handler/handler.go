@@ -2,8 +2,8 @@ package handler
 
 import (
 	"io"
+	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
@@ -46,22 +46,18 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	shortURL, err := url.Parse(h.config.BaseURL)
-	if err != nil {
-		http.Error(res, "Ne udalos sobrat url "+err.Error(), http.StatusBadRequest)
-		return
+	scheme := "http://"
+	if req.TLS != nil {
+		scheme = "https://"
 	}
-	shortURL, err = shortURL.Parse("/" + storedURL.Short)
-	if err != nil {
-		http.Error(res, "Ne udalos sobrat url "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// log.Default().Printf("cfg base url: %s shortUrl: %s config:%s\n", h.config.BaseURL, shortURL.String(), h.config)
+	shortURL := scheme + h.config.BaseURL + "/" + storedURL.Short
+
+	log.Printf("cfg base url: %s shortUrl: %s config:%s\n", h.config.BaseURL, shortURL, h.config)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 
-	io.WriteString(res, shortURL.String())
+	io.WriteString(res, shortURL)
 }
 
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
