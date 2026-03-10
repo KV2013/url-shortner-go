@@ -29,6 +29,7 @@ func TestCreate(t *testing.T) {
 		saveURLError  error
 		storedURL     *model.URL
 		expectedError bool
+		config        *config.Config
 		want          want
 	}{
 		{
@@ -39,16 +40,41 @@ func TestCreate(t *testing.T) {
 				Short:    "abc123",
 				Original: "http://example.com",
 			},
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "localhost:8080",
+			},
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusCreated,
-				response:    "http://localhost:8080/abc123", // ожидаемый короткий URL
+				response:    "localhost:8080/abc123", // ожидаемый короткий URL
 			},
 		},
 		{
-			name:          "400 Bad Request - save error",
-			request:       "http://localhost:8080",
-			url:           "http://example.com",
+			name:    "201 Created - with different baseurl",
+			request: "http://localhost:8080",
+			url:     "http://example.com",
+			storedURL: &model.URL{
+				Short:    "abc123",
+				Original: "http://example.com",
+			},
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "https://foo.bar:45000",
+			},
+			want: want{
+				contentType: "text/plain",
+				statusCode:  http.StatusCreated,
+				response:    "https://foo.bar:45000/abc123", // ожидаемый короткий URL
+			},
+		},
+		{
+			name:    "400 Bad Request - save error",
+			request: "http://localhost:8080",
+			url:     "http://example.com",
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+			},
 			saveURLError:  errors.New("failed to save"),
 			expectedError: true,
 			want: want{
@@ -56,9 +82,12 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:          "400 Bad Request - empty URL",
-			request:       "http://localhost:8080",
-			url:           "",
+			name:    "400 Bad Request - empty URL",
+			request: "http://localhost:8080",
+			url:     "",
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+			},
 			expectedError: true,
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -66,10 +95,6 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	config := &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseURL:       "localhost:8080",
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -87,7 +112,7 @@ func TestCreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService, config)
+			handler := New(mockService, tt.config)
 
 			body := strings.NewReader(tt.url)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -118,6 +143,7 @@ func TestRedirect(t *testing.T) {
 		exists             bool
 		expectsCallGetByID bool
 		expectedCode       int
+		config             *config.Config
 	}{
 		{
 			name: "307 Temporary Redirect - URL found",
@@ -129,6 +155,9 @@ func TestRedirect(t *testing.T) {
 			exists:             true,
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusTemporaryRedirect,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+			},
 		},
 		{
 			name:               "404 Not Found - URL not found",
@@ -136,6 +165,9 @@ func TestRedirect(t *testing.T) {
 			exists:             false,
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusNotFound,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+			},
 		},
 		{
 			name:               "400 Bad Request - empty id",
@@ -143,13 +175,12 @@ func TestRedirect(t *testing.T) {
 			exists:             false,
 			expectsCallGetByID: false,
 			expectedCode:       http.StatusBadRequest,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+			},
 		},
 	}
 
-	config := &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseURL:       "localhost:8080",
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Создаём контроллер моков
@@ -164,7 +195,7 @@ func TestRedirect(t *testing.T) {
 					Return(tt.foundURL, tt.exists)
 			}
 
-			handler := New(mockService, config)
+			handler := New(mockService, tt.config)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)

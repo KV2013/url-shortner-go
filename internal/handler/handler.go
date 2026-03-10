@@ -46,11 +46,7 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	scheme := "http://"
-	if req.TLS != nil {
-		scheme = "https://"
-	}
-	shortURL := scheme + h.config.BaseURL + "/" + storedURL.Short
+	shortURL := h.config.BaseURL + "/" + storedURL.Short
 
 	log.Printf("cfg base url: %s shortUrl: %s config:%s\n", h.config.BaseURL, shortURL, h.config)
 
