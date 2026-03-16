@@ -12,8 +12,21 @@ func NewConfig() (*Config, error) {
 		flagBaseURL = "http://" + flagRunAddr
 	}
 
-	return &Config{
+	cfg := Config{
 		ServerAddress: flagRunAddr,
 		BaseURL:       flagBaseURL,
-	}, nil
+	}
+
+	envCfg, err := parseEnv()
+	if err != nil {
+		return nil, err
+	}
+	if envCfg.EnvRunAddr != "" {
+		cfg.ServerAddress = envCfg.EnvRunAddr
+	}
+	if envCfg.EnvBaseURL != "" {
+		cfg.BaseURL = envCfg.EnvBaseURL
+	}
+
+	return &cfg, nil
 }
