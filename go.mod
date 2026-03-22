@@ -13,3 +13,8 @@ require (
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/spf13/pflag v1.0.10
 )
+
+require (
+	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
+)
