@@ -2,14 +2,15 @@ package router
 
 import (
 	"github.com/KV2013/url-shortner-go/internal/handler"
+	"github.com/KV2013/url-shortner-go/internal/middleware"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
-func Init(handler *handler.URLHandler) *chi.Mux {
+func Init(handler *handler.URLHandler, logger *zap.Logger) *chi.Mux {
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(middleware.ZapLogger(logger))
 	r.Post("/", handler.Create)
 	r.Get("/{id}", handler.Redirect)
 

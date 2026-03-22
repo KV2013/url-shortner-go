@@ -3,6 +3,7 @@ package config
 type Config struct {
 	ServerAddress string
 	BaseURL       string
+	LogLevel      string
 }
 
 func NewConfig() (*Config, error) {
@@ -15,6 +16,7 @@ func NewConfig() (*Config, error) {
 	cfg := Config{
 		ServerAddress: flagRunAddr,
 		BaseURL:       flagBaseURL,
+		LogLevel:      flagLogLevel,
 	}
 
 	envCfg, err := parseEnv()
