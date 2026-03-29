@@ -205,7 +205,8 @@ func TestApiCreate(t *testing.T) {
 			saveURLError:  errors.New("failed to save"),
 			expectedError: true,
 			want: want{
-				statusCode: http.StatusBadRequest,
+				statusCode:  http.StatusBadRequest,
+				contentType: "application/json",
 			},
 		},
 		{
@@ -219,7 +220,8 @@ func TestApiCreate(t *testing.T) {
 			},
 			expectedError: true,
 			want: want{
-				statusCode: http.StatusBadRequest,
+				statusCode:  http.StatusBadRequest,
+				contentType: "application/json",
 			},
 		},
 
