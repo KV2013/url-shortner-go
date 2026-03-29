@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
+	"github.com/mailru/easyjson"
 )
 
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
@@ -57,11 +57,13 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) ApiCreate(res http.ResponseWriter, req *http.Request) {
 	var decoded model.CreateURLRequest
 	res.Header().Set("Content-Type", "application/json")
-	dec := json.NewDecoder(req.Body)
-	if err := dec.Decode(&decoded); err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
+
+	reqBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	err = easyjson.Unmarshal(reqBody, &decoded)
 	if decoded.URL == "" {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -71,19 +73,17 @@ func (h *URLHandler) ApiCreate(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	jsonresp := model.CreateURLResponse{
+	resp := model.CreateURLResponse{
 		Result: h.config.BaseURL + "/" + storedURL.Short,
 	}
-
-	res.WriteHeader(http.StatusCreated)
-
-	enc := json.NewEncoder(res)
-	if err := enc.Encode(jsonresp); err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
+	jsonBody, err := easyjson.Marshal(resp)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	res.WriteHeader(http.StatusCreated)
+	res.Write(jsonBody)
 }
 
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
