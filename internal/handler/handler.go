@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -51,6 +52,36 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusCreated)
 
 	io.WriteString(res, shortURL)
+}
+
+func (h *URLHandler) ApiCreate(res http.ResponseWriter, req *http.Request) {
+	var decoded model.CreateURLRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&decoded); err != nil {
+		http.Error(res, "ne udalos resparsit json "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if decoded.URL == "" {
+		http.Error(res, "no url provided", http.StatusBadRequest)
+		return
+	}
+	storedURL, err := h.urlService.SaveURL(decoded.URL)
+	if err != nil {
+		http.Error(res, "Ne udalos sohranit url "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	jsonresp := model.CreateURLResponse{
+		Result: h.config.BaseURL + "/" + storedURL.Short,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+
+	enc := json.NewEncoder(res)
+	if err := enc.Encode(jsonresp); err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {

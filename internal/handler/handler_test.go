@@ -136,6 +136,135 @@ func TestCreate(t *testing.T) {
 	}
 }
 
+func TestApiCreate(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		response    string
+	}
+
+	tests := []struct {
+		name          string
+		request       string
+		url           string
+		body          string
+		saveURLError  error
+		storedURL     *model.URL
+		expectedError bool
+		config        *config.Config
+		want          want
+	}{
+		{
+			name:    "201 Created - successful save",
+			request: "http://localhost:8080/api/shorten",
+			url:     "http://example.com",
+			body:    `{"url":"http://example.com"}`,
+			storedURL: &model.URL{
+				Short:    "abc123",
+				Original: "http://example.com",
+			},
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `{"result":"http://localhost:8080/abc123"}`,
+			},
+		},
+		// ---
+		{
+			name:    "201 Created - with different baseurl",
+			request: "http://localhost:8080/api/shorten",
+			url:     "http://example.com",
+			body:    `{"url":"http://example.com"}`,
+			storedURL: &model.URL{
+				Short:    "abc123",
+				Original: "http://example.com",
+			},
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "https://foo.bar:45000",
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `{"result":"https://foo.bar:45000/abc123"}`,
+			},
+		},
+		{
+			name:    "400 Bad Request - save error",
+			request: "http://localhost:8080/api/shorten",
+			url:     "http://example.com",
+			body:    `{"url":"http://example.com"}`,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
+			},
+			saveURLError:  errors.New("failed to save"),
+			expectedError: true,
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:    "400 Bad Request - empty URL",
+			request: "http://localhost:8080/api/shorten",
+			url:     "",
+			body:    `{"url":""}`,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
+			},
+			expectedError: true,
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+
+		// ---
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+
+			if tt.body != "" && !tt.expectedError {
+				mockService.EXPECT().
+					SaveURL(tt.url).
+					Return(tt.storedURL, tt.saveURLError)
+			} else if tt.url != "" {
+				mockService.EXPECT().
+					SaveURL(tt.url).
+					Return(nil, tt.saveURLError)
+			}
+
+			handler := New(mockService, tt.config)
+
+			body := strings.NewReader(tt.body)
+			req := httptest.NewRequest(http.MethodPost, tt.request, body)
+			res := httptest.NewRecorder()
+
+			handler.ApiCreate(res, req)
+
+			// Проверяем результаты
+			assert.Equal(t, res.Code, tt.want.statusCode)
+			if tt.want.contentType != "" {
+				assert.Equal(t, res.Header().Get("Content-Type"), tt.want.contentType)
+			}
+
+			if tt.want.response != "" {
+				actualResponse := strings.TrimSpace(res.Body.String())
+				assert.Equal(t, actualResponse, tt.want.response)
+			}
+		})
+	}
+}
+
 func TestRedirect(t *testing.T) {
 	tests := []struct {
 		name               string
