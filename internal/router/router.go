@@ -12,7 +12,7 @@ func Init(handler *handler.URLHandler, logger *zap.Logger) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.ZapLogger(logger))
 	r.Post("/", handler.Create)
-	r.Post("/api/shorten", handler.Create)
+	r.Post("/api/shorten", handler.ApiCreate)
 	r.Get("/{id}", handler.Redirect)
 
 	return r
