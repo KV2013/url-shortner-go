@@ -23,7 +23,7 @@ func main() {
 		log.Fatal("Oshibka pri sozdanii logger")
 	}
 
-	repo, repoErr := file.NewRepository(config.FileStoragePath)
+	repo, repoErr := file.NewRepository(config.FileStoragePath, Logger)
 	if repoErr != nil {
 		log.Fatal("Oshibka pri sozdanii repozitoriya")
 	}
@@ -34,6 +34,7 @@ func main() {
 	mux := router.Init(handler, Logger)
 
 	log.Println("server zapuchen na " + config.ServerAddress)
+	log.Println("logging level " + config.LogLevel)
 
 	err := http.ListenAndServe(config.ServerAddress, mux)
 

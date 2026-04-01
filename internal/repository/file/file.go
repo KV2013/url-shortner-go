@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/KV2013/url-shortner-go/internal/model"
+	"go.uber.org/zap"
 )
 
 // type URLRepository interface {
@@ -16,9 +17,10 @@ import (
 type FileRepository struct {
 	file   *os.File
 	writer *bufio.Writer
+	logger *zap.Logger
 }
 
-func NewRepository(fileStoragePath string) (*FileRepository, error) {
+func NewRepository(fileStoragePath string, logger *zap.Logger) (*FileRepository, error) {
 	file, err := os.OpenFile(fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
@@ -27,24 +29,31 @@ func NewRepository(fileStoragePath string) (*FileRepository, error) {
 	return &FileRepository{
 		file:   file,
 		writer: bufio.NewWriter(file),
+		logger: logger,
 	}, nil
 }
 
 func (r *FileRepository) GetByID(id string) (*model.URL, bool) {
+	r.file.Seek(0, 0)
 	scanner := bufio.NewScanner(r.file)
+	var url model.URL
+	r.logger.Info("Searching url", zap.String("id", id))
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
+			r.logger.Error("Error reading file", zap.Error(err))
 			return nil, false
 		}
-		var url model.URL
 		if err := json.Unmarshal(scanner.Bytes(), &url); err != nil {
+			r.logger.Error("Error unmarshalling JSON", zap.Error(err))
 			return nil, false
 		}
 		if url.Short == id {
+			r.logger.Debug("Found url", zap.String("id", id), zap.String("url", url.Original))
 			return &url, true
 		}
 	}
 
+	r.logger.Info("Not found", zap.String("id", id))
 	return nil, false
 }
 
