@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/KV2013/url-shortner-go/internal/logger"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/magiconair/properties/assert"
 )
@@ -16,7 +17,11 @@ func newTempRepo(t *testing.T) (*FileRepository, string) {
 	}
 	f.Close()
 
-	repo, err := NewRepository(f.Name())
+	logger, err := logger.New("debug")
+	if err != nil {
+		t.Fatalf("не удалось создать логгер: %v", err)
+	}
+	repo, err := NewRepository(f.Name(), logger)
 	if err != nil {
 		t.Fatalf("NewRepository: %v", err)
 	}
@@ -91,7 +96,11 @@ func TestSave_PersistsAfterReopen(t *testing.T) {
 	f.Close()
 	defer os.Remove(path)
 
-	repo, err := NewRepository(path)
+	logger, err := logger.New("debug")
+	if err != nil {
+		t.Fatalf("не удалось создать логгер: %v", err)
+	}
+	repo, err := NewRepository(path, logger)
 	if err != nil {
 		t.Fatalf("NewRepository: %v", err)
 	}
@@ -99,7 +108,7 @@ func TestSave_PersistsAfterReopen(t *testing.T) {
 	repo.Close()
 
 	// открываем заново и проверяем, что данные сохранились
-	repo2, err := NewRepository(path)
+	repo2, err := NewRepository(path, logger)
 	if err != nil {
 		t.Fatalf("NewRepository (reopen): %v", err)
 	}

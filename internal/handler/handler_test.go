@@ -136,7 +136,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestApiCreate(t *testing.T) {
+func TestAPICreate(t *testing.T) {
 	type want struct {
 		contentType string
 		statusCode  int
@@ -251,7 +251,7 @@ func TestApiCreate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
 			res := httptest.NewRecorder()
 
-			handler.ApiCreate(res, req)
+			handler.APICreate(res, req)
 
 			// Проверяем результаты
 			assert.Equal(t, res.Code, tt.want.statusCode)

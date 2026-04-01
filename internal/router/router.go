@@ -13,7 +13,7 @@ func Init(handler *handler.URLHandler, logger *zap.Logger) *chi.Mux {
 	r.Use(middleware.ZapLogger(logger))
 	r.Use(middleware.GzipCompression)
 	r.Post("/", handler.Create)
-	r.Post("/api/shorten", handler.ApiCreate)
+	r.Post("/api/shorten", handler.APICreate)
 	r.Get("/{id}", handler.Redirect)
 
 	return r

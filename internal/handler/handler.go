@@ -54,7 +54,7 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, shortURL)
 }
 
-func (h *URLHandler) ApiCreate(res http.ResponseWriter, req *http.Request) {
+func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	var decoded model.CreateURLRequest
 	res.Header().Set("Content-Type", "application/json")
 
@@ -64,6 +64,10 @@ func (h *URLHandler) ApiCreate(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	err = easyjson.Unmarshal(reqBody, &decoded)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if decoded.URL == "" {
 		res.WriteHeader(http.StatusBadRequest)
 		return
