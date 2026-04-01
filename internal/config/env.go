@@ -3,9 +3,10 @@ package config
 import "github.com/caarlos0/env/v6"
 
 type envConfig struct {
-	EnvRunAddr  string `env:"SERVER_ADDRESS"`
-	EnvBaseURL  string `env:"BASE_URL"`
-	EnvLogLevel string `env:"LOG_LEVEL"`
+	EnvServerAddr      string `env:"SERVER_ADDRESS"`
+	EnvBaseURL         string `env:"BASE_URL"`
+	EnvLogLevel        string `env:"LOG_LEVEL"`
+	EnvFileStoragePath string `env:"FILE_STORAGE_PATH"`
 }
 
 func parseEnv() (*envConfig, error) {

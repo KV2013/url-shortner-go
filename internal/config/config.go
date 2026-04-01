@@ -1,33 +1,41 @@
 package config
 
+import "github.com/caarlos0/env/v6"
+
 type Config struct {
-	ServerAddress string
-	BaseURL       string
-	LogLevel      string
+	ServerAddress   string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 }
 
 func NewConfig() (*Config, error) {
-	parseFlags()
-
-	if flagBaseURL == "" {
-		flagBaseURL = "http://" + flagRunAddr
-	}
 
 	cfg := Config{
-		ServerAddress: flagRunAddr,
-		BaseURL:       flagBaseURL,
-		LogLevel:      flagLogLevel,
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		LogLevel:        "info",
+		FileStoragePath: "./urls.json",
 	}
 
-	envCfg, err := parseEnv()
+	err := env.Parse(&cfg)
 	if err != nil {
 		return nil, err
 	}
-	if envCfg.EnvRunAddr != "" {
-		cfg.ServerAddress = envCfg.EnvRunAddr
+
+	parseFlags()
+
+	if flagServerAddr != "" {
+		cfg.ServerAddress = flagServerAddr
 	}
-	if envCfg.EnvBaseURL != "" {
-		cfg.BaseURL = envCfg.EnvBaseURL
+	if flagBaseURL != "" {
+		cfg.BaseURL = flagBaseURL
+	}
+	if flagLogLevel != "" {
+		cfg.LogLevel = flagLogLevel
+	}
+	if flagFileStoragePath != "" {
+		cfg.FileStoragePath = flagFileStoragePath
 	}
 
 	return &cfg, nil

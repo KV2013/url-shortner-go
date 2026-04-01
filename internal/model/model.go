@@ -1,8 +1,8 @@
 package model
 
 type URL struct {
-	Original string `json:"original"`
-	Short    string `json:"short"`
+	Original string `json:"original_url"`
+	Short    string `json:"short_url"`
 }
 
 type CreateURLRequest struct {

@@ -10,10 +10,10 @@ type InMemoryRepository struct {
 	UrlsByID map[string]model.URL
 }
 
-func NewRepository() *InMemoryRepository {
+func NewRepository() (*InMemoryRepository, error) {
 	return &InMemoryRepository{
 		UrlsByID: make(map[string]model.URL),
-	}
+	}, nil
 }
 
 func (r *InMemoryRepository) GetByID(id string) (*model.URL, bool) {
