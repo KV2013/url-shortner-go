@@ -6,6 +6,8 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/model"
 )
 
+var ErrIDAlreadyExists = errors.New("id уже занят")
+
 type InMemoryRepository struct {
 	UrlsByID map[string]model.URL
 }
@@ -27,7 +29,7 @@ func (r *InMemoryRepository) GetByID(id string) (*model.URL, bool) {
 
 func (r *InMemoryRepository) Save(url *model.URL) error {
 	if _, exists := r.UrlsByID[url.Short]; exists {
-		return errors.New("id uzje zanyat")
+		return ErrIDAlreadyExists
 	}
 	r.UrlsByID[url.Short] = *url
 
