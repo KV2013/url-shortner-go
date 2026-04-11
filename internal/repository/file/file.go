@@ -37,23 +37,23 @@ func (r *FileRepository) GetByID(id string) (*model.URL, bool) {
 	r.file.Seek(0, 0)
 	scanner := bufio.NewScanner(r.file)
 	var url model.URL
-	r.logger.Info("Searching url", zap.String("id", id))
+	r.logger.Info("Ищу url по id", zap.String("id", id))
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
-			r.logger.Error("Error reading file", zap.Error(err))
+			r.logger.Error("Ошибка чтения файла", zap.Error(err))
 			return nil, false
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &url); err != nil {
-			r.logger.Error("Error unmarshalling JSON", zap.Error(err))
+			r.logger.Error("Ошибка при распаковке JSON", zap.Error(err))
 			return nil, false
 		}
 		if url.Short == id {
-			r.logger.Debug("Found url", zap.String("id", id), zap.String("url", url.Original))
+			r.logger.Debug("URL найден", zap.String("id", id), zap.String("url", url.Original))
 			return &url, true
 		}
 	}
 
-	r.logger.Info("Not found", zap.String("id", id))
+	r.logger.Info("Не найдено", zap.String("id", id))
 	return nil, false
 }
 

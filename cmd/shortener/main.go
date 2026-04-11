@@ -10,22 +10,23 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/repository/file"
 	"github.com/KV2013/url-shortner-go/internal/router"
 	"github.com/KV2013/url-shortner-go/internal/service"
+	"go.uber.org/zap"
 )
 
 func main() {
 
 	config, cfgErr := config.NewConfig()
 	if cfgErr != nil {
-		log.Fatal("Oshibka pri sborke konfiga")
+		log.Fatal("Ошибка при сборке конфига")
 	}
 	Logger, loggerErr := logger.New(config.LogLevel)
 	if loggerErr != nil {
-		log.Fatal("Oshibka pri sozdanii logger")
+		log.Fatal("Ошибка при создании логгера")
 	}
 
 	repo, repoErr := file.NewRepository(config.FileStoragePath, Logger)
 	if repoErr != nil {
-		log.Fatal("Oshibka pri sozdanii repozitoriya")
+		Logger.Fatal("Ошибка при создании репозитория")
 	}
 	defer repo.Close()
 
@@ -33,12 +34,11 @@ func main() {
 	handler := handler.New(urlService, config)
 	mux := router.Init(handler, Logger)
 
-	log.Println("server zapuchen na " + config.ServerAddress)
-	log.Println("logging level " + config.LogLevel)
+	Logger.Info("Сервер запущен", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
 
 	err := http.ListenAndServe(config.ServerAddress, mux)
 
 	if err != nil {
-		log.Fatal("Ne udalos zapustit server ", err)
+		Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
 	}
 }

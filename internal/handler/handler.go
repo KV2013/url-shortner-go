@@ -36,13 +36,13 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 
 	reqURL := string(reqBody)
 	if reqURL == "" {
-		http.Error(res, "no url provided", http.StatusBadRequest)
+		http.Error(res, "URL не задан", http.StatusBadRequest)
 		return
 	}
 
 	storedURL, err := h.urlService.SaveURL(reqURL)
 	if err != nil {
-		http.Error(res, "Ne udalos sohranit url "+err.Error(), http.StatusBadRequest)
+		http.Error(res, "Не удалось сохранить url "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 	urlID := req.PathValue("id")
 	if urlID == "" {
-		http.Error(res, "empty id", http.StatusBadRequest)
+		http.Error(res, "не задан id", http.StatusBadRequest)
 		return
 	}
 
