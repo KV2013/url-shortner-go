@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -17,11 +16,7 @@ type SQLXRepository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(cfg *config.Config) (*SQLXRepository, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DbHost, cfg.DbPort, cfg.DbUser, cfg.DbPassword, cfg.DbName, cfg.DbSSLMode,
-	)
+func NewRepository(dsn string) (*SQLXRepository, error) {
 	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось подключиться к базе данных: %w", err)

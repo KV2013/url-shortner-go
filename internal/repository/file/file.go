@@ -72,6 +72,10 @@ func (r *FileRepository) Save(url *model.URL) error {
 	return r.writer.Flush()
 }
 
+func (r *FileRepository) Ping() error {
+	return nil
+}
+
 func (r *FileRepository) Close() error {
 	return r.file.Close()
 }

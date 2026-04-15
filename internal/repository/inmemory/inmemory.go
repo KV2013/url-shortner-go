@@ -32,6 +32,14 @@ func (r *InMemoryRepository) GetByID(id string) (*model.URL, bool) {
 	return &found, true
 }
 
+func (r *InMemoryRepository) Ping() error {
+	return nil
+}
+
+func (r *InMemoryRepository) Close() error {
+	return nil
+}
+
 func (r *InMemoryRepository) Save(url *model.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
