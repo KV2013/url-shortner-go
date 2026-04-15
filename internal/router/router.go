@@ -16,5 +16,7 @@ func Init(handler *handler.URLHandler, logger *zap.Logger) *chi.Mux {
 	r.Post("/api/shorten", handler.APICreate)
 	r.Get("/{id}", handler.Redirect)
 
+	r.Get("/ping", handler.Ping)
+
 	return r
 }

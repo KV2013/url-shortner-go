@@ -114,7 +114,7 @@ func TestCreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService, tt.config)
+			handler := New(mockService, nil, tt.config)
 
 			body := strings.NewReader(tt.url)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -245,7 +245,7 @@ func TestAPICreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService, tt.config)
+			handler := New(mockService, nil, tt.config)
 
 			body := strings.NewReader(tt.body)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -331,7 +331,7 @@ func TestRedirect(t *testing.T) {
 					Return(tt.foundURL, tt.exists)
 			}
 
-			handler := New(mockService, tt.config)
+			handler := New(mockService, nil, tt.config)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)

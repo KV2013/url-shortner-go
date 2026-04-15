@@ -7,6 +7,12 @@ type Config struct {
 	BaseURL         string `env:"BASE_URL"`
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	DbHost          string `env:"DB_HOST"`
+	DbPort          int    `env:"DB_PORT"`
+	DbUser          string `env:"DB_USER"`
+	DbPassword      string `env:"DB_PASSWORD"`
+	DbName          string `env:"DB_NAME"`
+	DbSSLMode       string `env:"DB_SSL_MODE"`
 }
 
 func NewConfig() (*Config, error) {
@@ -16,6 +22,12 @@ func NewConfig() (*Config, error) {
 		BaseURL:         "http://localhost:8080",
 		LogLevel:        "info",
 		FileStoragePath: "./urls.json",
+		DbHost:          "localhost",
+		DbPort:          5432,
+		DbUser:          "user1",
+		DbPassword:      "password1",
+		DbName:          "urlshortenergo",
+		DbSSLMode:       "disable",
 	}
 
 	err := env.Parse(&cfg)
@@ -36,6 +48,24 @@ func NewConfig() (*Config, error) {
 	}
 	if flagFileStoragePath != "" {
 		cfg.FileStoragePath = flagFileStoragePath
+	}
+	if flagDbHost != "" {
+		cfg.DbHost = flagDbHost
+	}
+	if flagDbPort != 0 {
+		cfg.DbPort = flagDbPort
+	}
+	if flagDbUser != "" {
+		cfg.DbUser = flagDbUser
+	}
+	if flagDbPassword != "" {
+		cfg.DbPassword = flagDbPassword
+	}
+	if flagDbName != "" {
+		cfg.DbName = flagDbName
+	}
+	if flagDbSSLMode != "" {
+		cfg.DbSSLMode = flagDbSSLMode
 	}
 
 	return &cfg, nil

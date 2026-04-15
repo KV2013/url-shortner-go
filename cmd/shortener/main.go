@@ -12,7 +12,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler"
 	"github.com/KV2013/url-shortner-go/internal/logger"
-	"github.com/KV2013/url-shortner-go/internal/repository/file"
+	"github.com/KV2013/url-shortner-go/internal/repository/sqlx"
 	"github.com/KV2013/url-shortner-go/internal/router"
 	"github.com/KV2013/url-shortner-go/internal/service"
 	"go.uber.org/zap"
@@ -29,14 +29,14 @@ func main() {
 		log.Fatal("Ошибка при создании логгера")
 	}
 
-	repo, repoErr := file.NewRepository(config.FileStoragePath, Logger)
+	repo, repoErr := sqlx.NewRepository(config)
 	if repoErr != nil {
 		Logger.Fatal("Ошибка при создании репозитория")
 	}
 	defer repo.Close()
 
 	urlService := service.NewURLService(repo)
-	handler := handler.New(urlService, config)
+	handler := handler.New(urlService, repo, config)
 	mux := router.Init(handler, Logger)
 
 	srv := &http.Server{

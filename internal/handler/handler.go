@@ -15,14 +15,20 @@ type URLService interface {
 	GetByID(id string) (*model.URL, bool)
 }
 
+type Pinger interface {
+	Ping() error
+}
+
 type URLHandler struct {
 	urlService URLService
+	pinger     Pinger
 	config     *config.Config
 }
 
-func New(urlService URLService, config *config.Config) *URLHandler {
+func New(urlService URLService, pinger Pinger, config *config.Config) *URLHandler {
 	return &URLHandler{
 		urlService: urlService,
+		pinger:     pinger,
 		config:     config,
 	}
 }
@@ -105,4 +111,12 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	http.Redirect(res, req, url.Original, http.StatusTemporaryRedirect)
+}
+
+func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
+	if err := h.pinger.Ping(); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
 }
