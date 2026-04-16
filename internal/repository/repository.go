@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/KV2013/url-shortner-go/internal/repository/file"
@@ -10,8 +12,8 @@ import (
 )
 
 type Repository interface {
-	Save(url *model.URL) error
-	GetByID(id string) (*model.URL, bool)
+	Save(ctx context.Context, url *model.URL) error
+	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	Ping() error
 	Close() error
 }

@@ -1,13 +1,14 @@
 package sqlx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/golang-migrate/migrate/v4"
 	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -52,9 +53,9 @@ func (r *SQLXRepository) runMigrations() error {
 	return nil
 }
 
-func (r *SQLXRepository) GetByID(id string) (*model.URL, bool) {
+func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bool) {
 	var url model.URL
-	err := r.db.Get(&url, `
+	err := r.db.GetContext(ctx, &url, `
 		SELECT short_url AS short, original_url AS original
 		FROM urls
 		WHERE short_url = $1
@@ -66,8 +67,8 @@ func (r *SQLXRepository) GetByID(id string) (*model.URL, bool) {
 	return &url, true
 }
 
-func (r *SQLXRepository) Save(url *model.URL) error {
-	_, err := r.db.Exec(`
+func (r *SQLXRepository) Save(ctx context.Context, url *model.URL) error {
+	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO urls (short_url, original_url)
 		VALUES ($1, $2)
 	`, url.Short, url.Original)

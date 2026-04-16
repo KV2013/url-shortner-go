@@ -106,11 +106,11 @@ func TestCreate(t *testing.T) {
 
 			if tt.url != "" && !tt.expectedError {
 				mockService.EXPECT().
-					SaveURL(tt.url).
+					SaveURL(gomock.Any(), tt.url).
 					Return(tt.storedURL, tt.saveURLError)
 			} else if tt.url != "" {
 				mockService.EXPECT().
-					SaveURL(tt.url).
+					SaveURL(gomock.Any(), tt.url).
 					Return(nil, tt.saveURLError)
 			}
 
@@ -237,11 +237,11 @@ func TestAPICreate(t *testing.T) {
 
 			if tt.body != "" && !tt.expectedError {
 				mockService.EXPECT().
-					SaveURL(tt.url).
+					SaveURL(gomock.Any(), tt.url).
 					Return(tt.storedURL, tt.saveURLError)
 			} else if tt.url != "" {
 				mockService.EXPECT().
-					SaveURL(tt.url).
+					SaveURL(gomock.Any(), tt.url).
 					Return(nil, tt.saveURLError)
 			}
 
@@ -327,7 +327,7 @@ func TestRedirect(t *testing.T) {
 
 			if tt.expectsCallGetByID {
 				mockService.EXPECT().
-					GetByID(tt.id).
+					GetByID(gomock.Any(), tt.id).
 					Return(tt.foundURL, tt.exists)
 			}
 

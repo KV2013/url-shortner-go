@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -20,7 +21,7 @@ func NewRepository() (*InMemoryRepository, error) {
 	}, nil
 }
 
-func (r *InMemoryRepository) GetByID(id string) (*model.URL, bool) {
+func (r *InMemoryRepository) GetByID(_ context.Context, id string) (*model.URL, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -40,7 +41,7 @@ func (r *InMemoryRepository) Close() error {
 	return nil
 }
 
-func (r *InMemoryRepository) Save(url *model.URL) error {
+func (r *InMemoryRepository) Save(_ context.Context, url *model.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

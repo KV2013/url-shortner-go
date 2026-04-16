@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 
@@ -11,8 +12,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
 type URLService interface {
-	SaveURL(url string) (*model.URL, error)
-	GetByID(id string) (*model.URL, bool)
+	SaveURL(ctx context.Context, url string) (*model.URL, error)
+	GetByID(ctx context.Context, id string) (*model.URL, bool)
 }
 
 type Pinger interface {
@@ -46,7 +47,8 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	storedURL, err := h.urlService.SaveURL(reqURL)
+	ctx := req.Context()
+	storedURL, err := h.urlService.SaveURL(ctx, reqURL)
 	if err != nil {
 		http.Error(res, "Не удалось сохранить url "+err.Error(), http.StatusBadRequest)
 		return
@@ -78,7 +80,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	storedURL, err := h.urlService.SaveURL(decoded.URL)
+	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -103,7 +105,7 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	url, exists := h.urlService.GetByID(urlID)
+	url, exists := h.urlService.GetByID(req.Context(), urlID)
 	if !exists {
 		http.NotFound(res, req)
 		return

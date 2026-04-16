@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -35,23 +36,25 @@ func newTempRepo(t *testing.T) (*FileRepository, string) {
 func TestSave(t *testing.T) {
 	repo, _ := newTempRepo(t)
 
+	ctx := context.Background()
 	url := &model.URL{Original: "https://example.com", Short: "abc123"}
-	err := repo.Save(url)
+	err := repo.Save(ctx, url)
 	assert.Equal(t, err, nil)
 }
 
 func TestGetByID_Found(t *testing.T) {
 	repo, _ := newTempRepo(t)
 
+	ctx := context.Background()
 	saved := &model.URL{Original: "https://example.com", Short: "abc123"}
-	if err := repo.Save(saved); err != nil {
+	if err := repo.Save(ctx, saved); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
 	// GetByID читает файл с начала — нужно сбросить позицию
 	repo.file.Seek(0, 0)
 
-	got, ok := repo.GetByID("abc123")
+	got, ok := repo.GetByID(ctx, "abc123")
 	assert.Equal(t, ok, true)
 	assert.Equal(t, got.Original, saved.Original)
 	assert.Equal(t, got.Short, saved.Short)
@@ -60,10 +63,11 @@ func TestGetByID_Found(t *testing.T) {
 func TestGetByID_NotFound(t *testing.T) {
 	repo, _ := newTempRepo(t)
 
-	repo.Save(&model.URL{Original: "https://example.com", Short: "abc123"})
+	ctx := context.Background()
+	repo.Save(ctx, &model.URL{Original: "https://example.com", Short: "abc123"})
 	repo.file.Seek(0, 0)
 
-	_, ok := repo.GetByID("nonexistent")
+	_, ok := repo.GetByID(ctx, "nonexistent")
 	assert.Equal(t, ok, false)
 }
 
@@ -75,14 +79,15 @@ func TestGetByID_MultipleRecords(t *testing.T) {
 		{Original: "https://second.com", Short: "bbb"},
 		{Original: "https://third.com", Short: "ccc"},
 	}
+	ctx := context.Background()
 	for _, u := range urls {
-		if err := repo.Save(u); err != nil {
+		if err := repo.Save(ctx, u); err != nil {
 			t.Fatalf("Save: %v", err)
 		}
 	}
 
 	repo.file.Seek(0, 0)
-	got, ok := repo.GetByID("bbb")
+	got, ok := repo.GetByID(ctx, "bbb")
 	assert.Equal(t, ok, true)
 	assert.Equal(t, got.Original, "https://second.com")
 }
@@ -104,7 +109,8 @@ func TestSave_PersistsAfterReopen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRepository: %v", err)
 	}
-	repo.Save(&model.URL{Original: "https://example.com", Short: "xyz"})
+	ctx := context.Background()
+	repo.Save(ctx, &model.URL{Original: "https://example.com", Short: "xyz"})
 	repo.Close()
 
 	// открываем заново и проверяем, что данные сохранились
@@ -114,7 +120,7 @@ func TestSave_PersistsAfterReopen(t *testing.T) {
 	}
 	defer repo2.Close()
 
-	got, ok := repo2.GetByID("xyz")
+	got, ok := repo2.GetByID(ctx, "xyz")
 	assert.Equal(t, ok, true)
 	assert.Equal(t, got.Original, "https://example.com")
 }

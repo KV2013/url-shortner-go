@@ -2,6 +2,7 @@ package file
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 
@@ -33,7 +34,7 @@ func NewRepository(fileStoragePath string, logger *zap.Logger) (*FileRepository,
 	}, nil
 }
 
-func (r *FileRepository) GetByID(id string) (*model.URL, bool) {
+func (r *FileRepository) GetByID(_ context.Context, id string) (*model.URL, bool) {
 	r.file.Seek(0, 0)
 	scanner := bufio.NewScanner(r.file)
 	var url model.URL
@@ -57,7 +58,7 @@ func (r *FileRepository) GetByID(id string) (*model.URL, bool) {
 	return nil, false
 }
 
-func (r *FileRepository) Save(url *model.URL) error {
+func (r *FileRepository) Save(_ context.Context, url *model.URL) error {
 	jsonurl, err := json.Marshal(url)
 	if err != nil {
 		return err
