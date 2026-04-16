@@ -31,13 +31,13 @@ func easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel(in *jlexer.
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
 		switch key {
-		case "original":
+		case "original_url":
 			if in.IsNull() {
 				in.Skip()
 			} else {
 				out.Original = string(in.String())
 			}
-		case "short":
+		case "short_url":
 			if in.IsNull() {
 				in.Skip()
 			} else {
@@ -58,12 +58,12 @@ func easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel(out *jwrite
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"original\":"
+		const prefix string = ",\"original_url\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.Original))
 	}
 	{
-		const prefix string = ",\"short\":"
+		const prefix string = ",\"short_url\":"
 		out.RawString(prefix)
 		out.String(string(in.Short))
 	}
@@ -222,4 +222,156 @@ func (v *CreateURLRequest) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *CreateURLRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel2(l, v)
+}
+func easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel3(in *jlexer.Lexer, out *CreateURLBatchResponseItem) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "correlation_id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.CorrelationID = string(in.String())
+			}
+		case "short_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ShortURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel3(out *jwriter.Writer, in CreateURLBatchResponseItem) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"correlation_id\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.CorrelationID))
+	}
+	{
+		const prefix string = ",\"short_url\":"
+		out.RawString(prefix)
+		out.String(string(in.ShortURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v CreateURLBatchResponseItem) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel3(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v CreateURLBatchResponseItem) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel3(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *CreateURLBatchResponseItem) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel3(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *CreateURLBatchResponseItem) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel3(l, v)
+}
+func easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel4(in *jlexer.Lexer, out *CreateURLBatchRequestItem) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "correlation_id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.CorrelationID = string(in.String())
+			}
+		case "original_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.OriginalURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel4(out *jwriter.Writer, in CreateURLBatchRequestItem) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"correlation_id\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.CorrelationID))
+	}
+	{
+		const prefix string = ",\"original_url\":"
+		out.RawString(prefix)
+		out.String(string(in.OriginalURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v CreateURLBatchRequestItem) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel4(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v CreateURLBatchRequestItem) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonC80ae7adEncodeGithubComKV2013UrlShortnerGoInternalModel4(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *CreateURLBatchRequestItem) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel4(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *CreateURLBatchRequestItem) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonC80ae7adDecodeGithubComKV2013UrlShortnerGoInternalModel4(l, v)
 }

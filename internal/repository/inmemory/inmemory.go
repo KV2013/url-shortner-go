@@ -33,6 +33,19 @@ func (r *InMemoryRepository) GetByID(_ context.Context, id string) (*model.URL, 
 	return &found, true
 }
 
+func (r *InMemoryRepository) SaveMany(_ context.Context, urls []*model.URL) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, url := range urls {
+		if _, exists := r.UrlsByID[url.Short]; exists {
+			return ErrIDAlreadyExists
+		}
+		r.UrlsByID[url.Short] = *url
+	}
+	return nil
+}
+
 func (r *InMemoryRepository) Ping() error {
 	return nil
 }

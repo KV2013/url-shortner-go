@@ -73,6 +73,15 @@ func (r *FileRepository) Save(_ context.Context, url *model.URL) error {
 	return r.writer.Flush()
 }
 
+func (r *FileRepository) SaveMany(ctx context.Context, urls []*model.URL) error {
+	for _, url := range urls {
+		if err := r.Save(ctx, url); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *FileRepository) Ping() error {
 	return nil
 }

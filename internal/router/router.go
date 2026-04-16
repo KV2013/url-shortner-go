@@ -13,10 +13,12 @@ func Init(handler *handler.URLHandler, logger *zap.Logger) *chi.Mux {
 	r.Use(middleware.ZapLogger(logger))
 	r.Use(middleware.GzipCompression)
 	r.Post("/", handler.Create)
-	r.Post("/api/shorten", handler.APICreate)
 	r.Get("/{id}", handler.Redirect)
 
 	r.Get("/ping", handler.Ping)
+
+	r.Post("/api/shorten", handler.APICreate)
+	r.Post("/api/shorten/batch", handler.APICreateBatch)
 
 	return r
 }

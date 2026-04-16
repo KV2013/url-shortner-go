@@ -83,6 +83,35 @@ func (r *SQLXRepository) Save(ctx context.Context, url *model.URL) error {
 	return nil
 }
 
+func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("не удалось начать транзакцию: %w", err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO urls (short_url, original_url)
+		VALUES ($1, $2)
+	`)
+	if err != nil {
+		return fmt.Errorf("не удалось создать prepared statement: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, url := range urls {
+		if _, err := stmt.ExecContext(ctx, url.Short, url.Original); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return ErrIDAlreadyExists
+			}
+			return fmt.Errorf("ошибка сохранения url: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (r *SQLXRepository) Close() error {
 	return r.db.Close()
 }

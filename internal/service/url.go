@@ -9,6 +9,7 @@ import (
 
 type URLRepository interface {
 	Save(ctx context.Context, url *model.URL) error
+	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 }
 
@@ -32,6 +33,26 @@ func (s *URLService) SaveURL(ctx context.Context, url string) (*model.URL, error
 	}
 
 	return newURL, nil
+}
+
+func (s *URLService) SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error) {
+	newURLs := make([]*model.URL, 0, len(urls))
+	for _, url := range urls {
+		newURLs = append(newURLs, &model.URL{
+			Original: url,
+			Short:    random.NewRandomString(10),
+		})
+	}
+
+	if err := s.urlRepository.SaveMany(ctx, newURLs); err != nil {
+		return nil, err
+	}
+
+	result := make([]model.URL, 0, len(newURLs))
+	for _, u := range newURLs {
+		result = append(result, *u)
+	}
+	return result, nil
 }
 
 func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, bool) {

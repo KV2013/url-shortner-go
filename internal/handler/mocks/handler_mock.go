@@ -80,6 +80,45 @@ func (c *MockURLServiceGetByIDCall) DoAndReturn(f func(context.Context, string) 
 	return c
 }
 
+// SaveManyURL mocks base method.
+func (m *MockURLService) SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveManyURL", ctx, urls)
+	ret0, _ := ret[0].([]model.URL)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveManyURL indicates an expected call of SaveManyURL.
+func (mr *MockURLServiceMockRecorder) SaveManyURL(ctx, urls any) *MockURLServiceSaveManyURLCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveManyURL", reflect.TypeOf((*MockURLService)(nil).SaveManyURL), ctx, urls)
+	return &MockURLServiceSaveManyURLCall{Call: call}
+}
+
+// MockURLServiceSaveManyURLCall wrap *gomock.Call
+type MockURLServiceSaveManyURLCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockURLServiceSaveManyURLCall) Return(arg0 []model.URL, arg1 error) *MockURLServiceSaveManyURLCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockURLServiceSaveManyURLCall) Do(f func(context.Context, []string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockURLServiceSaveManyURLCall) DoAndReturn(f func(context.Context, []string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // SaveURL mocks base method.
 func (m *MockURLService) SaveURL(ctx context.Context, url string) (*model.URL, error) {
 	m.ctrl.T.Helper()

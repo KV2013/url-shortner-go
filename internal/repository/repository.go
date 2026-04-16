@@ -13,6 +13,7 @@ import (
 
 type Repository interface {
 	Save(ctx context.Context, url *model.URL) error
+	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	Ping() error
 	Close() error

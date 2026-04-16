@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
 type URLService interface {
 	SaveURL(ctx context.Context, url string) (*model.URL, error)
+	SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error)
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 }
 
@@ -37,7 +39,7 @@ func New(urlService URLService, pinger Pinger, config *config.Config) *URLHandle
 func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	reqBody, err := io.ReadAll(req.Body)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		http.Error(res, "ошибка в теле запроса "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -91,6 +93,51 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	jsonBody, err := easyjson.Marshal(resp)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	res.WriteHeader(http.StatusCreated)
+	res.Write(jsonBody)
+}
+
+func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	reqBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(res, "ошибка в теле запроса "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var requestItems []model.CreateURLBatchRequestItem
+	if err := json.Unmarshal(reqBody, &requestItems); err != nil {
+		http.Error(res, "ошибка при парсинге запроса "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	originalURLs := make([]string, 0, len(requestItems))
+	for _, item := range requestItems {
+		originalURLs = append(originalURLs, item.OriginalURL)
+	}
+
+	ctx := req.Context()
+	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	responseItems := make([]model.CreateURLBatchResponseItem, 0, len(requestItems))
+	for i, savedURL := range savedURLs {
+		responseItems = append(responseItems, model.CreateURLBatchResponseItem{
+			CorrelationID: requestItems[i].CorrelationID,
+			ShortURL:      h.config.BaseURL + "/" + savedURL.Short,
+		})
+	}
+
+	jsonBody, err := json.Marshal(responseItems)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
