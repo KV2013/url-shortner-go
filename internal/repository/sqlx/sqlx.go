@@ -9,6 +9,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -74,7 +75,17 @@ func (r *SQLXRepository) Save(ctx context.Context, url *model.URL) error {
 	`, url.Short, url.Original)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			if pgErr.ConstraintName == "u_idx_urls_original_url" {
+				var existing model.URL
+				if err := r.db.GetContext(ctx, &existing, `
+					SELECT short_url AS short, original_url AS original
+					FROM urls WHERE original_url = $1
+				`, url.Original); err != nil {
+					return fmt.Errorf("ошибка поиска существующего url: %w", err)
+				}
+				return &model.ErrURLAlreadyExists{URL: existing}
+			}
 			return ErrIDAlreadyExists
 		}
 		return fmt.Errorf("ошибка сохранения url: %w", err)
@@ -102,7 +113,17 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 	for _, url := range urls {
 		if _, err := stmt.ExecContext(ctx, url.Short, url.Original); err != nil {
 			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				if pgErr.ConstraintName == "u_idx_urls_original_url" {
+					var existing model.URL
+					if err := r.db.GetContext(ctx, &existing, `
+						SELECT short_url AS short, original_url AS original
+						FROM urls WHERE original_url = $1
+					`, url.Original); err != nil {
+						return fmt.Errorf("ошибка поиска существующего url: %w", err)
+					}
+					return &model.ErrURLAlreadyExists{URL: existing}
+				}
 				return ErrIDAlreadyExists
 			}
 			return fmt.Errorf("ошибка сохранения url: %w", err)

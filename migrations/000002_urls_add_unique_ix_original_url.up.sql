@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS u_idx_urls_original_url ON urls (original_url);

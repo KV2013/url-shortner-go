@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -52,6 +53,13 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	storedURL, err := h.urlService.SaveURL(ctx, reqURL)
 	if err != nil {
+		var urlExists *model.ErrURLAlreadyExists
+		if errors.As(err, &urlExists) {
+			res.Header().Set("Content-Type", "text/plain")
+			res.WriteHeader(http.StatusConflict)
+			io.WriteString(res, h.config.BaseURL+"/"+urlExists.URL.Short)
+			return
+		}
 		http.Error(res, "Не удалось сохранить url "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -84,6 +92,14 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	}
 	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL)
 	if err != nil {
+		var urlExists *model.ErrURLAlreadyExists
+		if errors.As(err, &urlExists) {
+			resp := model.CreateURLResponse{Result: h.config.BaseURL + "/" + urlExists.URL.Short}
+			jsonBody, _ := easyjson.Marshal(resp)
+			res.WriteHeader(http.StatusConflict)
+			res.Write(jsonBody)
+			return
+		}
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -123,7 +139,16 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	ctx := req.Context()
 	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		var urlExists *model.ErrURLAlreadyExists
+		if errors.As(err, &urlExists) {
+			http.Error(
+				res,
+				"ошибка при сохранении URL: original_url: "+urlExists.URL.Original+" short_url:"+urlExists.URL.Short,
+				http.StatusBadRequest,
+			)
+			return
+		}
+		http.Error(res, "ошибка при сохранении URL: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

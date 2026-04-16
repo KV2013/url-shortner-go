@@ -22,3 +22,11 @@ type CreateURLBatchResponseItem struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
+
+type ErrURLAlreadyExists struct {
+	URL URL
+}
+
+func (e *ErrURLAlreadyExists) Error() string {
+	return "URL уже существует: " + e.URL.Short
+}
