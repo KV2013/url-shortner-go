@@ -9,6 +9,7 @@ import (
 
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler/mocks"
+	"github.com/KV2013/url-shortner-go/internal/logger"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/magiconair/properties/assert"
 	"go.uber.org/mock/gomock"
@@ -97,6 +98,10 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
+	Logger, loggerErr := logger.New("debug")
+	if loggerErr != nil {
+		t.Fatalf("не удалось создать логгер: %v", loggerErr)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -114,7 +119,7 @@ func TestCreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService, nil, tt.config)
+			handler := New(mockService, nil, tt.config, Logger)
 
 			body := strings.NewReader(tt.url)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -228,6 +233,10 @@ func TestAPICreate(t *testing.T) {
 		// ---
 	}
 
+	Logger, loggerErr := logger.New("debug")
+	if loggerErr != nil {
+		t.Fatalf("не удалось создать логгер: %v", loggerErr)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -245,7 +254,7 @@ func TestAPICreate(t *testing.T) {
 					Return(nil, tt.saveURLError)
 			}
 
-			handler := New(mockService, nil, tt.config)
+			handler := New(mockService, nil, tt.config, Logger)
 
 			body := strings.NewReader(tt.body)
 			req := httptest.NewRequest(http.MethodPost, tt.request, body)
@@ -316,7 +325,10 @@ func TestRedirect(t *testing.T) {
 			},
 		},
 	}
-
+	Logger, loggerErr := logger.New("debug")
+	if loggerErr != nil {
+		t.Fatalf("не удалось создать логгер: %v", loggerErr)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Создаём контроллер моков
@@ -331,7 +343,7 @@ func TestRedirect(t *testing.T) {
 					Return(tt.foundURL, tt.exists)
 			}
 
-			handler := New(mockService, nil, tt.config)
+			handler := New(mockService, nil, tt.config, Logger)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)

@@ -10,6 +10,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/mailru/easyjson"
+	"go.uber.org/zap"
 )
 
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
@@ -27,13 +28,23 @@ type URLHandler struct {
 	urlService URLService
 	pinger     Pinger
 	config     *config.Config
+	logger     *zap.Logger
 }
 
-func New(urlService URLService, pinger Pinger, config *config.Config) *URLHandler {
+func (h *URLHandler) writeJSONError(res http.ResponseWriter, errMsg string, status int) {
+	body, _ := json.Marshal(model.APIErrorResponse{Error: errMsg})
+	res.WriteHeader(status)
+	if _, err := res.Write(body); err != nil {
+		h.logger.Error("ошибка при записи ответа", zap.Error(err))
+	}
+}
+
+func New(urlService URLService, pinger Pinger, config *config.Config, logger *zap.Logger) *URLHandler {
 	return &URLHandler{
 		urlService: urlService,
 		pinger:     pinger,
 		config:     config,
+		logger:     logger,
 	}
 }
 
@@ -57,7 +68,12 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 		if errors.As(err, &urlExists) {
 			res.Header().Set("Content-Type", "text/plain")
 			res.WriteHeader(http.StatusConflict)
-			io.WriteString(res, h.config.BaseURL+"/"+urlExists.URL.Short)
+			_, err := io.WriteString(res, h.config.BaseURL+"/"+urlExists.URL.Short)
+			if err != nil {
+				h.logger.Error("ошибка при записи ответа", zap.Error(err))
+				http.Error(res, "ошибка при записи ответа", http.StatusInternalServerError)
+				return
+			}
 			return
 		}
 		http.Error(res, "Не удалось сохранить url "+err.Error(), http.StatusBadRequest)
@@ -69,7 +85,12 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 
-	io.WriteString(res, shortURL)
+	_, err = io.WriteString(res, shortURL)
+	if err != nil {
+		h.logger.Error("ошибка при записи ответа", zap.Error(err))
+		http.Error(res, "ошибка при записи ответа", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
@@ -78,16 +99,16 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 
 	reqBody, err := io.ReadAll(req.Body)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		h.writeJSONError(res, "ошибка чтения тела запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = easyjson.Unmarshal(reqBody, &decoded)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if decoded.URL == "" {
-		res.WriteHeader(http.StatusBadRequest)
+		h.writeJSONError(res, "URL не задан", http.StatusBadRequest)
 		return
 	}
 	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL)
@@ -97,10 +118,12 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 			resp := model.CreateURLResponse{Result: h.config.BaseURL + "/" + urlExists.URL.Short}
 			jsonBody, _ := easyjson.Marshal(resp)
 			res.WriteHeader(http.StatusConflict)
-			res.Write(jsonBody)
+			if _, err = res.Write(jsonBody); err != nil {
+				h.logger.Error("ошибка при записи ответа", zap.Error(err))
+			}
 			return
 		}
-		res.WriteHeader(http.StatusBadRequest)
+		h.writeJSONError(res, "не удалось сохранить URL: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	resp := model.CreateURLResponse{
@@ -113,7 +136,12 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusCreated)
-	res.Write(jsonBody)
+	_, err = res.Write(jsonBody)
+	if err != nil {
+		h.logger.Error("ошибка при записи ответа", zap.Error(err))
+		http.Error(res, "ошибка при записи ответа", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) {
@@ -121,13 +149,13 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 
 	reqBody, err := io.ReadAll(req.Body)
 	if err != nil {
-		http.Error(res, "ошибка в теле запроса "+err.Error(), http.StatusBadRequest)
+		h.writeJSONError(res, "ошибка чтения тела запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var requestItems []model.CreateURLBatchRequestItem
 	if err := json.Unmarshal(reqBody, &requestItems); err != nil {
-		http.Error(res, "ошибка при парсинге запроса "+err.Error(), http.StatusBadRequest)
+		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -141,14 +169,13 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
-			http.Error(
-				res,
-				"ошибка при сохранении URL: original_url: "+urlExists.URL.Original+" short_url:"+urlExists.URL.Short,
-				http.StatusBadRequest,
+			h.writeJSONError(res,
+				"URL уже существует: original_url: "+urlExists.URL.Original+", short_url: "+urlExists.URL.Short,
+				http.StatusConflict,
 			)
 			return
 		}
-		http.Error(res, "ошибка при сохранении URL: "+err.Error(), http.StatusBadRequest)
+		h.writeJSONError(res, "ошибка при сохранении URL: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -162,12 +189,18 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 
 	jsonBody, err := json.Marshal(responseItems)
 	if err != nil {
+		h.logger.Error("ошибка при подготовке ответа", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	res.WriteHeader(http.StatusCreated)
-	res.Write(jsonBody)
+	_, err = res.Write(jsonBody)
+	if err != nil {
+		h.logger.Error("ошибка при записи ответа", zap.Error(err))
+		http.Error(res, "ошибка при записи ответа", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {

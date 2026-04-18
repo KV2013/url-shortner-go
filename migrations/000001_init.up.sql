@@ -4,5 +4,3 @@ CREATE TABLE IF NOT EXISTS urls (
     original_url TEXT         NOT NULL,
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_urls_short_url ON urls (short_url);
