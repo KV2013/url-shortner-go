@@ -101,9 +101,22 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO urls (short_url, original_url)
-		VALUES ($1, $2)
+	stmt, err := tx.PreparexContext(ctx, `
+		WITH ins AS (
+			INSERT INTO urls (short_url, original_url)
+			VALUES ($1, $2)
+			ON CONFLICT (original_url) DO NOTHING
+			RETURNING short_url, original_url
+		)
+		SELECT short_url AS short, original_url AS original, FALSE AS conflicted
+		FROM ins
+		UNION ALL
+		SELECT short_url AS short, original_url AS original, TRUE AS conflicted
+		FROM urls
+		WHERE original_url = $2
+		AND NOT EXISTS (
+			SELECT 1 FROM ins
+		)
 	`)
 	if err != nil {
 		return fmt.Errorf("не удалось создать prepared statement: %w", err)
@@ -111,22 +124,19 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 	defer stmt.Close()
 
 	for _, url := range urls {
-		if _, err := stmt.ExecContext(ctx, url.Short, url.Original); err != nil {
+		var insResult struct {
+			model.URL
+			Conflicted bool `db:"conflicted"`
+		}
+		if err := stmt.GetContext(ctx, &insResult, url.Short, url.Original); err != nil {
 			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-				if pgErr.ConstraintName == "u_idx_urls_original_url" {
-					var existing model.URL
-					if err := r.db.GetContext(ctx, &existing, `
-						SELECT short_url AS short, original_url AS original
-						FROM urls WHERE original_url = $1
-					`, url.Original); err != nil {
-						return fmt.Errorf("ошибка поиска существующего url: %w", err)
-					}
-					return &model.ErrURLAlreadyExists{URL: existing}
-				}
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation { // конфликт по short_url на всякий случай
 				return ErrIDAlreadyExists
 			}
 			return fmt.Errorf("ошибка сохранения url: %w", err)
+		}
+		if insResult.Conflicted {
+			return &model.ErrURLAlreadyExists{URL: insResult.URL}
 		}
 	}
 
