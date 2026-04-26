@@ -57,7 +57,7 @@ func (r *SQLXRepository) runMigrations() error {
 func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bool) {
 	var url model.URL
 	err := r.db.GetContext(ctx, &url, `
-		SELECT short_url AS short, original_url AS original
+		SELECT short_url AS short, original_url AS original, user_id
 		FROM urls
 		WHERE short_url = $1
 	`, id)
@@ -68,18 +68,31 @@ func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bo
 	return &url, true
 }
 
+func (r *SQLXRepository) GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error) {
+	var urls []model.URL
+	err := r.db.SelectContext(ctx, &urls, `
+		SELECT short_url AS short, original_url AS original, user_id
+		FROM urls
+		WHERE user_id = $1
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	return urls, nil
+}
+
 func (r *SQLXRepository) Save(ctx context.Context, url *model.URL) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO urls (short_url, original_url)
-		VALUES ($1, $2)
-	`, url.Short, url.Original)
+		INSERT INTO urls (short_url, original_url, user_id)
+		VALUES ($1, $2, $3)
+	`, url.Short, url.Original, url.UserID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			if pgErr.ConstraintName == "u_idx_urls_original_url" {
 				var existing model.URL
 				if err := r.db.GetContext(ctx, &existing, `
-					SELECT short_url AS short, original_url AS original
+					SELECT short_url AS short, original_url AS original, user_id
 					FROM urls WHERE original_url = $1
 				`, url.Original); err != nil {
 					return fmt.Errorf("ошибка поиска существующего url: %w", err)
@@ -103,15 +116,15 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 
 	stmt, err := tx.PreparexContext(ctx, `
 		WITH ins AS (
-			INSERT INTO urls (short_url, original_url)
-			VALUES ($1, $2)
+			INSERT INTO urls (short_url, original_url, user_id)
+			VALUES ($1, $2, $3)
 			ON CONFLICT (original_url) DO NOTHING
-			RETURNING short_url, original_url
+			RETURNING short_url, original_url, user_id
 		)
-		SELECT short_url AS short, original_url AS original, FALSE AS conflicted
+		SELECT short_url AS short, original_url AS original, user_id, FALSE AS conflicted
 		FROM ins
 		UNION ALL
-		SELECT short_url AS short, original_url AS original, TRUE AS conflicted
+		SELECT short_url AS short, original_url AS original, user_id, TRUE AS conflicted
 		FROM urls
 		WHERE original_url = $2
 		AND NOT EXISTS (
@@ -128,7 +141,7 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 			model.URL
 			Conflicted bool `db:"conflicted"`
 		}
-		if err := stmt.GetContext(ctx, &insResult, url.Short, url.Original); err != nil {
+		if err := stmt.GetContext(ctx, &insResult, url.Short, url.Original, url.UserID); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation { // конфликт по short_url на всякий случай
 				return ErrIDAlreadyExists

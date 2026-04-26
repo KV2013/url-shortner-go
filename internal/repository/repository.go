@@ -15,6 +15,7 @@ type Repository interface {
 	Save(ctx context.Context, url *model.URL) error
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
+	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	Ping() error
 	Close() error
 }

@@ -11,6 +11,7 @@ type URLRepository interface {
 	Save(ctx context.Context, url *model.URL) error
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
+	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 }
 
 type URLService struct {
@@ -21,11 +22,12 @@ func NewURLService(urlRepository URLRepository) *URLService {
 	return &URLService{urlRepository: urlRepository}
 }
 
-func (s *URLService) SaveURL(ctx context.Context, url string) (*model.URL, error) {
+func (s *URLService) SaveURL(ctx context.Context, url string, userID string) (*model.URL, error) {
 	newID := random.NewRandomString(10)
 	newURL := &model.URL{
 		Original: url,
 		Short:    newID,
+		UserID:   userID,
 	}
 	err := s.urlRepository.Save(ctx, newURL)
 	if err != nil {
@@ -35,12 +37,13 @@ func (s *URLService) SaveURL(ctx context.Context, url string) (*model.URL, error
 	return newURL, nil
 }
 
-func (s *URLService) SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error) {
+func (s *URLService) SaveManyURL(ctx context.Context, urls []string, userID string) ([]model.URL, error) {
 	newURLs := make([]*model.URL, 0, len(urls))
 	for _, url := range urls {
 		newURLs = append(newURLs, &model.URL{
 			Original: url,
 			Short:    random.NewRandomString(10),
+			UserID:   userID,
 		})
 	}
 
@@ -53,6 +56,10 @@ func (s *URLService) SaveManyURL(ctx context.Context, urls []string) ([]model.UR
 		result = append(result, *u)
 	}
 	return result, nil
+}
+
+func (s *URLService) GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error) {
+	return s.urlRepository.GetAllByUserID(ctx, userID)
 }
 
 func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, bool) {

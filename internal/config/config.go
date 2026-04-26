@@ -8,6 +8,7 @@ type Config struct {
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	JWTSecretKey    string `env:"JWT_SECRET_KEY"`
 }
 
 func NewConfig() (*Config, error) {
@@ -16,6 +17,7 @@ func NewConfig() (*Config, error) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 		LogLevel:      "info",
+		JWTSecretKey:  "default-secret-change-me",
 	}
 
 	err := env.Parse(&cfg)
@@ -39,6 +41,9 @@ func NewConfig() (*Config, error) {
 	}
 	if flagDatabaseDSN != "" {
 		cfg.DatabaseDSN = flagDatabaseDSN
+	}
+	if flagJWTSecretKey != "" {
+		cfg.JWTSecretKey = flagJWTSecretKey
 	}
 
 	return &cfg, nil

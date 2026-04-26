@@ -37,7 +37,7 @@ func main() {
 
 	urlService := service.NewURLService(repo)
 	handler := handler.New(urlService, repo, config, Logger)
-	mux := router.Init(handler, Logger)
+	mux := router.Init(handler, Logger, config)
 
 	srv := &http.Server{
 		Addr:         config.ServerAddress,

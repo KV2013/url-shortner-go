@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
+	"github.com/KV2013/url-shortner-go/internal/middleware"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/mailru/easyjson"
 	"go.uber.org/zap"
@@ -15,9 +16,15 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
 type URLService interface {
-	SaveURL(ctx context.Context, url string) (*model.URL, error)
-	SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error)
+	SaveURL(ctx context.Context, url string, userID string) (*model.URL, error)
+	SaveManyURL(ctx context.Context, urls []string, userID string) ([]model.URL, error)
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
+	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
+}
+
+func userIDFromContext(ctx context.Context) string {
+	id, _ := ctx.Value(middleware.UserIDContextKey).(string)
+	return id
 }
 
 type Pinger interface {
@@ -62,7 +69,7 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	storedURL, err := h.urlService.SaveURL(ctx, reqURL)
+	storedURL, err := h.urlService.SaveURL(ctx, reqURL, userIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -111,7 +118,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 		h.writeJSONError(res, "URL не задан", http.StatusBadRequest)
 		return
 	}
-	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL)
+	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL, userIDFromContext(req.Context()))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -165,7 +172,7 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	}
 
 	ctx := req.Context()
-	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs)
+	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs, userIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -226,4 +233,45 @@ func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res.WriteHeader(http.StatusOK)
+}
+
+func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	userID := userIDFromContext(req.Context())
+	if userID == "" {
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.urlService.GetAllByUserID(req.Context(), userID)
+	if err != nil {
+		h.writeJSONError(res, "ошибка получения URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(urls) == 0 {
+		res.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	type responseItem struct {
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
+	}
+	items := make([]responseItem, 0, len(urls))
+	for _, u := range urls {
+		items = append(items, responseItem{
+			ShortURL:    h.config.BaseURL + "/" + u.Short,
+			OriginalURL: u.Original,
+		})
+	}
+
+	body, err := json.Marshal(items)
+	if err != nil {
+		h.writeJSONError(res, "ошибка сериализации", http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	_, _ = res.Write(body)
 }

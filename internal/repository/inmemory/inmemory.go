@@ -46,6 +46,19 @@ func (r *InMemoryRepository) SaveMany(_ context.Context, urls []*model.URL) erro
 	return nil
 }
 
+func (r *InMemoryRepository) GetAllByUserID(_ context.Context, userID string) ([]model.URL, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []model.URL
+	for _, url := range r.UrlsByID {
+		if url.UserID == userID {
+			result = append(result, url)
+		}
+	}
+	return result, nil
+}
+
 func (r *InMemoryRepository) Ping() error {
 	return nil
 }
