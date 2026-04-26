@@ -2,13 +2,12 @@ package middleware
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/service/auth"
+	"github.com/google/uuid"
 )
 
 const tokenCookieName = "token"
@@ -48,7 +47,5 @@ func AuthJWT(cfg *config.Config) func(next http.Handler) http.Handler {
 }
 
 func generateUserID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	return uuid.New().String()
 }
