@@ -78,3 +78,13 @@ func (r *InMemoryRepository) Save(_ context.Context, url *model.URL) error {
 
 	return nil
 }
+
+func (r *InMemoryRepository) DeleteURLs(_ context.Context, ids []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range ids {
+		delete(r.UrlsByID, id)
+	}
+	return nil
+}

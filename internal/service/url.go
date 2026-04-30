@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/KV2013/url-shortner-go/internal/service/random"
@@ -12,6 +13,7 @@ type URLRepository interface {
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
+	DeleteURLs(ctx context.Context, ids []string) error
 }
 
 type URLService struct {
@@ -69,4 +71,20 @@ func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, bool) 
 	}
 
 	return url, true
+}
+
+func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID string) error {
+	// получить URL по каждому id и проверить, что они принадлежат пользователю
+	for _, shortUrl := range shortUrls {
+		url, exists := s.GetByID(ctx, shortUrl)
+		if !exists {
+			return errors.New("URL с id " + shortUrl + " не найден")
+		}
+
+		if url.UserID != userID {
+			return errors.New("URL с id " + shortUrl + " не принадлежит пользователю")
+		}
+	}
+
+	return s.urlRepository.DeleteURLs(ctx, shortUrls)
 }

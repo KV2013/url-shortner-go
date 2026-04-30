@@ -22,6 +22,7 @@ func Init(handler *handler.URLHandler, logger *zap.Logger, cfg *config.Config) *
 	r.Post("/api/shorten", handler.APICreate)
 	r.Post("/api/shorten/batch", handler.APICreateBatch)
 	r.Get("/api/user/urls", handler.GetUserURLs)
+	r.Delete("/api/user/urls", handler.APIDeleteURLs)
 
 	return r
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/golang-migrate/migrate/v4"
@@ -19,6 +20,7 @@ var ErrIDAlreadyExists = errors.New("id уже занят")
 
 type SQLXRepository struct {
 	db *sqlx.DB
+	delCh chan model.URL
 }
 
 func NewRepository(dsn string) (*SQLXRepository, error) {
@@ -27,7 +29,7 @@ func NewRepository(dsn string) (*SQLXRepository, error) {
 		return nil, fmt.Errorf("не удалось подключиться к базе данных: %w", err)
 	}
 
-	repo := &SQLXRepository{db: db}
+	repo := &SQLXRepository{db: db, delCh: make(chan model.URL, 3)}
 
 	if err := repo.runMigrations(); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения миграций: %w", err)
@@ -162,4 +164,32 @@ func (r *SQLXRepository) Close() error {
 
 func (r *SQLXRepository) Ping() error {
 	return r.db.Ping()
+}
+
+func (r *SQLXRepository) DeleteURLs(ctx context.Context, ids []string) error {
+
+	return nil
+}
+
+func (r *SQLXRepository) pushToDeleteQueue(url model.URL) {
+	select {
+	case r.delCh <- url:
+	default:
+		// если канал заполнен, просто пропускаем удаление, чтобы не блокировать основной поток
+	}
+}
+
+func (r *SQLXRepository) startDeleteQueue() {
+	ticker := time.NewTicker(3 * time.Second)
+	var urls []model.URL
+
+	for {
+		select {
+		case url := <-r.delCh:
+			urls = append(urls, url)
+		case <-ticker.C:
+			if len(urls) == 0 {
+				continue
+			}
+	}
 }

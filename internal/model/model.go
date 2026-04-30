@@ -1,9 +1,10 @@
 package model
 
 type URL struct {
-	Original string `json:"original_url" db:"original"`
-	Short    string `json:"short_url"    db:"short"`
-	UserID   string `json:"user_id"      db:"user_id"`
+	Original    string `json:"original_url" db:"original"`
+	Short       string `json:"short_url"    db:"short"`
+	UserID      string `json:"user_id"      db:"user_id"`
+	DeletedFlag bool   `json:"-"             db:"is_deleted"`
 }
 
 type CreateURLRequest struct {

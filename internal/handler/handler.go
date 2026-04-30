@@ -20,6 +20,7 @@ type URLService interface {
 	SaveManyURL(ctx context.Context, urls []string, userID string) ([]model.URL, error)
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
+	DeleteURLs(ctx context.Context, ids []string, userID string) error
 }
 
 func userIDFromContext(ctx context.Context) string {
@@ -222,8 +223,13 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 		http.NotFound(res, req)
 		return
 	}
-
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	if url.DeletedFlag {
+		http.Error(res, "URL удалён", http.StatusGone)
+		return
+	}
+
 	http.Redirect(res, req, url.Original, http.StatusTemporaryRedirect)
 }
 
@@ -274,4 +280,34 @@ func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 	}
 	res.WriteHeader(http.StatusOK)
 	_, _ = res.Write(body)
+}
+
+func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	userID := userIDFromContext(req.Context())
+	if userID == "" {
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	reqBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		h.writeJSONError(res, "ошибка чтения тела запроса: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var urlIDs []string
+	if err := json.Unmarshal(reqBody, &urlIDs); err != nil {
+		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.urlService.DeleteURLs(req.Context(), urlIDs, userID); err != nil {
+		h.writeJSONError(res, "ошибка при удалении URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res.WriteHeader(http.StatusAccepted)
+
 }
