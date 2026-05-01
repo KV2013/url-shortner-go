@@ -225,7 +225,7 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 			http.NotFound(res, req)
 			return
 		}
-		var errUrlDeleted *model.ErrUrlDeleted
+		var errUrlDeleted *model.ErrURLDeleted
 		if errors.As(err, &errUrlDeleted) {
 			http.Error(res, "URL удалён", http.StatusGone)
 			return

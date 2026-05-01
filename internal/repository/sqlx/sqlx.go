@@ -217,14 +217,14 @@ func (r *SQLXRepository) startDeleteQueue() {
 
 func (r *SQLXRepository) runDeleteQuery(ctx context.Context, urls []model.URL) error {
 
-	inSql := fmt.Sprintf("(%s)", placeholders(len(urls)))
+	inSQL := fmt.Sprintf("(%s)", placeholders(len(urls)))
 
 	args := make([]interface{}, len(urls))
 	for i, url := range urls {
 		args[i] = url.Short
 	}
 
-	query := fmt.Sprintf("UPDATE urls SET is_deleted = TRUE WHERE short_url IN %s", inSql)
+	query := fmt.Sprintf("UPDATE urls SET is_deleted = TRUE WHERE short_url IN %s", inSQL)
 	_, err := r.db.ExecContext(ctx, query, args...)
 
 	return err

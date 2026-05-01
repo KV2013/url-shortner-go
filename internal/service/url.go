@@ -71,7 +71,7 @@ func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, error)
 	}
 
 	if url.DeletedFlag {
-		return nil, &model.ErrUrlDeleted{Short: id}
+		return nil, &model.ErrURLDeleted{Short: id}
 	}
 
 	return url, nil
@@ -80,14 +80,14 @@ func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, error)
 func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID string) error {
 	// получить URL по каждому id и проверить, что они принадлежат пользователю
 	var urls []model.URL
-	for _, shortUrl := range shortUrls {
-		url, err := s.GetByID(ctx, shortUrl)
+	for _, shortURL := range shortUrls {
+		url, err := s.GetByID(ctx, shortURL)
 		if err != nil {
 			return err
 		}
 
 		if url.UserID != userID {
-			return errors.New("URL с id " + shortUrl + " не принадлежит пользователю")
+			return errors.New("URL с id " + shortURL + " не принадлежит пользователю")
 		}
 		urls = append(urls, *url)
 	}

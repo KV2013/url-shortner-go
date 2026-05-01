@@ -45,10 +45,10 @@ func (e *ErrURLNotFound) Error() string {
 	return "URL не найден: " + e.Short
 }
 
-type ErrUrlDeleted struct {
+type ErrURLDeleted struct {
 	Short string
 }
 
-func (e *ErrUrlDeleted) Error() string {
+func (e *ErrURLDeleted) Error() string {
 	return "URL удален: " + e.Short
 }
