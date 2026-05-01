@@ -13,7 +13,7 @@ func Init(handler *handler.URLHandler, logger *zap.Logger, cfg *config.Config) *
 	r := chi.NewRouter()
 	r.Use(middleware.ZapLogger(logger))
 	r.Use(middleware.GzipCompression)
-	r.Use(middleware.AuthJWT(cfg))
+	r.Use(middleware.AuthJWT(cfg, logger))
 	r.Post("/", handler.Create)
 	r.Get("/{id}", handler.Redirect)
 

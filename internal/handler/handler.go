@@ -18,7 +18,7 @@ import (
 type URLService interface {
 	SaveURL(ctx context.Context, url string, userID string) (*model.URL, error)
 	SaveManyURL(ctx context.Context, urls []string, userID string) ([]model.URL, error)
-	GetByID(ctx context.Context, id string) (*model.URL, bool)
+	GetByID(ctx context.Context, id string) (*model.URL, error)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	DeleteURLs(ctx context.Context, ids []string, userID string) error
 }
@@ -218,17 +218,23 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	url, exists := h.urlService.GetByID(req.Context(), urlID)
-	if !exists {
-		http.NotFound(res, req)
+	url, err := h.urlService.GetByID(req.Context(), urlID)
+	if err != nil {
+		var errURLNotFound *model.ErrURLNotFound
+		if errors.As(err, &errURLNotFound) {
+			http.NotFound(res, req)
+			return
+		}
+		var errUrlDeleted *model.ErrUrlDeleted
+		if errors.As(err, &errUrlDeleted) {
+			http.Error(res, "URL удалён", http.StatusGone)
+			return
+		}
+		h.logger.Error("ошибка при получении URL", zap.Error(err))
+		http.Error(res, "ошибка при получении URL", http.StatusInternalServerError)
 		return
 	}
 	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-	if url.DeletedFlag {
-		http.Error(res, "URL удалён", http.StatusGone)
-		return
-	}
 
 	http.Redirect(res, req, url.Original, http.StatusTemporaryRedirect)
 }

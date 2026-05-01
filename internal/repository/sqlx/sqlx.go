@@ -63,12 +63,15 @@ func (r *SQLXRepository) runMigrations() error {
 func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bool) {
 	var url model.URL
 	err := r.db.GetContext(ctx, &url, `
-		SELECT short_url AS short, original_url AS original, user_id
+		SELECT short_url AS short, original_url AS original, user_id, is_deleted
 		FROM urls
 		WHERE short_url = $1
 	`, id)
 	if err != nil {
 		return nil, false
+	}
+	if url.DeletedFlag {
+		r.logger.Debug("URL удалён", zap.String("id", id), zap.String("url", url.Original))
 	}
 
 	return &url, true
@@ -80,6 +83,7 @@ func (r *SQLXRepository) GetAllByUserID(ctx context.Context, userID string) ([]m
 		SELECT short_url AS short, original_url AS original, user_id
 		FROM urls
 		WHERE user_id = $1
+		AND is_deleted = FALSE
 	`, userID)
 	if err != nil {
 		return nil, err
@@ -191,17 +195,20 @@ func (r *SQLXRepository) startDeleteQueue() {
 	ticker := time.NewTicker(3 * time.Second)
 	var urls []model.URL
 
+	r.logger.Info("запуск очереди на удаление URL")
 	for {
 		select {
 		case url := <-r.delCh:
 			urls = append(urls, url)
+			r.logger.Debug("URL добавлен в очередь на удаление", zap.String("short_url", url.Short), zap.String("original_url", url.Original))
 		case <-ticker.C:
 			if len(urls) == 0 {
 				continue
 			}
+			r.logger.Debug("ticker.C: запуск удаления URL", zap.Int("count", len(urls)))
 			err := r.runDeleteQuery(context.TODO(), urls)
 			if err != nil {
-				fmt.Printf("ошибка при удалении url: %v\n", err)
+				r.logger.Error("ошибка при удалении url", zap.Error(err))
 			}
 			urls = nil
 		}

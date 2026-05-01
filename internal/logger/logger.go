@@ -28,7 +28,8 @@ func New(level string) (*zap.Logger, error) {
 }
 
 type ZapLogFormatter struct {
-	Logger *zap.Logger
+	Logger    *zap.Logger
+	UserIDKey any
 }
 
 func (f *ZapLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
@@ -46,6 +47,11 @@ func (f *ZapLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
 	}
 	if reqID := middleware.GetReqID(r.Context()); reqID != "" {
 		fields = append(fields, zap.String("request_id", reqID))
+	}
+	if f.UserIDKey != nil {
+		if uid, ok := r.Context().Value(f.UserIDKey).(string); ok && uid != "" {
+			fields = append(fields, zap.String("user_id", uid))
+		}
 	}
 
 	return &ZapLogEntry{

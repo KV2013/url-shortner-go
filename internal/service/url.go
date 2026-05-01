@@ -64,22 +64,26 @@ func (s *URLService) GetAllByUserID(ctx context.Context, userID string) ([]model
 	return s.urlRepository.GetAllByUserID(ctx, userID)
 }
 
-func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, bool) {
+func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	url, exists := s.urlRepository.GetByID(ctx, id)
 	if !exists {
-		return nil, false
+		return nil, &model.ErrURLNotFound{Short: id}
 	}
 
-	return url, true
+	if url.DeletedFlag {
+		return nil, &model.ErrUrlDeleted{Short: id}
+	}
+
+	return url, nil
 }
 
 func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID string) error {
 	// получить URL по каждому id и проверить, что они принадлежат пользователю
 	var urls []model.URL
 	for _, shortUrl := range shortUrls {
-		url, exists := s.GetByID(ctx, shortUrl)
-		if !exists {
-			return errors.New("URL с id " + shortUrl + " не найден")
+		url, err := s.GetByID(ctx, shortUrl)
+		if err != nil {
+			return err
 		}
 
 		if url.UserID != userID {

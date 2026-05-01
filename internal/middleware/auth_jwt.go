@@ -2,17 +2,20 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/service/auth"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 const tokenCookieName = "token"
 
-func AuthJWT(cfg *config.Config) func(next http.Handler) http.Handler {
+func AuthJWT(cfg *config.Config, logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var userID string
@@ -25,8 +28,19 @@ func AuthJWT(cfg *config.Config) func(next http.Handler) http.Handler {
 				}
 			}
 
+			logger.Debug("middleware.AuthJWT", zap.String("userID", userID), zap.String("cookie", fmt.Sprint(cookie)), zap.Error(err))
 			if userID == "" {
 				userID = generateUserID()
+				var parts []string
+				for _, c := range r.Cookies() {
+					parts = append(parts, fmt.Sprintf("%s=%s", c.Name, c.Value))
+				}
+
+				logger.Debug(
+					"middleware.AuthJWT: generated new userID",
+					zap.String("userID", userID),
+					zap.String("cookies", strings.Join(parts, "; ")),
+				)
 
 				tokenString, tokenErr := auth.GenerateAccessToken(userID, cfg.JWTSecretKey)
 				if tokenErr == nil {

@@ -9,5 +9,5 @@ import (
 )
 
 func ZapLogger(l *zap.Logger) func(next http.Handler) http.Handler {
-	return middleware.RequestLogger(&logger.ZapLogFormatter{Logger: l})
+	return middleware.RequestLogger(&logger.ZapLogFormatter{Logger: l, UserIDKey: UserIDContextKey})
 }
