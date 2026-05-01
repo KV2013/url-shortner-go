@@ -16,14 +16,14 @@ type Repository interface {
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
-	DeleteURLs(ctx context.Context, ids []string) error
+	DeleteURLs(ctx context.Context, urls []model.URL) error
 	Ping() error
 	Close() error
 }
 
 func New(cfg *config.Config, logger *zap.Logger) (Repository, error) {
 	if cfg.DatabaseDSN != "" {
-		return sqlxrepo.NewRepository(cfg.DatabaseDSN)
+		return sqlxrepo.NewRepository(cfg.DatabaseDSN, logger)
 	}
 	if cfg.FileStoragePath != "" {
 		return file.NewRepository(cfg.FileStoragePath, logger)

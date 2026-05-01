@@ -14,26 +14,30 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 var ErrIDAlreadyExists = errors.New("id уже занят")
 
 type SQLXRepository struct {
-	db *sqlx.DB
-	delCh chan model.URL
+	db     *sqlx.DB
+	delCh  chan model.URL
+	logger *zap.Logger
 }
 
-func NewRepository(dsn string) (*SQLXRepository, error) {
+func NewRepository(dsn string, logger *zap.Logger) (*SQLXRepository, error) {
 	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось подключиться к базе данных: %w", err)
 	}
 
-	repo := &SQLXRepository{db: db, delCh: make(chan model.URL, 3)}
+	repo := &SQLXRepository{db: db, delCh: make(chan model.URL, 1024), logger: logger}
 
 	if err := repo.runMigrations(); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения миграций: %w", err)
 	}
+
+	go repo.startDeleteQueue()
 
 	return repo, nil
 }
@@ -166,17 +170,21 @@ func (r *SQLXRepository) Ping() error {
 	return r.db.Ping()
 }
 
-func (r *SQLXRepository) DeleteURLs(ctx context.Context, ids []string) error {
+func (r *SQLXRepository) DeleteURLs(ctx context.Context, urls []model.URL) error {
+
+	for _, url := range urls {
+		if err := r.pushToDeleteQueue(url); err != nil {
+			return fmt.Errorf("ошибка добавления url в очередь на удаление: %w", err)
+		}
+	}
 
 	return nil
 }
 
-func (r *SQLXRepository) pushToDeleteQueue(url model.URL) {
-	select {
-	case r.delCh <- url:
-	default:
-		// если канал заполнен, просто пропускаем удаление, чтобы не блокировать основной поток
-	}
+func (r *SQLXRepository) pushToDeleteQueue(url model.URL) error {
+	r.delCh <- url
+
+	return nil
 }
 
 func (r *SQLXRepository) startDeleteQueue() {
@@ -191,5 +199,38 @@ func (r *SQLXRepository) startDeleteQueue() {
 			if len(urls) == 0 {
 				continue
 			}
+			err := r.runDeleteQuery(context.TODO(), urls)
+			if err != nil {
+				fmt.Printf("ошибка при удалении url: %v\n", err)
+			}
+			urls = nil
+		}
 	}
+}
+
+func (r *SQLXRepository) runDeleteQuery(ctx context.Context, urls []model.URL) error {
+
+	inSql := fmt.Sprintf("(%s)", placeholders(len(urls)))
+
+	args := make([]interface{}, len(urls))
+	for i, url := range urls {
+		args[i] = url.Short
+	}
+
+	query := fmt.Sprintf("UPDATE urls SET is_deleted = TRUE WHERE short_url IN %s", inSql)
+	_, err := r.db.ExecContext(ctx, query, args...)
+
+	return err
+}
+
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	result := "$1"
+	for i := 2; i <= n; i++ {
+		result += fmt.Sprintf(", $%d", i)
+	}
+
+	return result
 }

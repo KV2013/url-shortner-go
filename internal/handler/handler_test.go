@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler/mocks"
 	"github.com/KV2013/url-shortner-go/internal/logger"
+	"github.com/KV2013/url-shortner-go/internal/middleware"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/magiconair/properties/assert"
 	"go.uber.org/mock/gomock"
@@ -324,6 +326,22 @@ func TestRedirect(t *testing.T) {
 				BaseURL:       "http://localhost:8080",
 			},
 		},
+		{
+			name: "410 Gone - URL deleted",
+			id:   "deleted1",
+			foundURL: &model.URL{
+				Short:       "deleted1",
+				Original:    "https://example.com",
+				DeletedFlag: true,
+			},
+			exists:             true,
+			expectsCallGetByID: true,
+			expectedCode:       http.StatusGone,
+			config: &config.Config{
+				ServerAddress: "localhost:8080",
+				BaseURL:       "http://localhost:8080",
+			},
+		},
 	}
 	Logger, loggerErr := logger.New("debug")
 	if loggerErr != nil {
@@ -357,10 +375,146 @@ func TestRedirect(t *testing.T) {
 				assert.Equal(t, res.Code, tt.expectedCode)
 			}
 
-			if tt.exists {
+			if tt.exists && !tt.foundURL.DeletedFlag {
 				location := res.Header().Get("Location")
 				assert.Equal(t, location, tt.foundURL.Original)
 			}
+		})
+	}
+}
+
+func ctxWithUserID(userID string) context.Context {
+	return context.WithValue(context.Background(), middleware.UserIDContextKey, userID)
+}
+
+func TestGetUserURLs(t *testing.T) {
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+
+	tests := []struct {
+		name         string
+		userID       string
+		serviceURLs  []model.URL
+		serviceErr   error
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:   "200 OK - has URLs",
+			userID: "user-1",
+			serviceURLs: []model.URL{
+				{Short: "abc", Original: "https://example.com", UserID: "user-1"},
+			},
+			expectedCode: http.StatusOK,
+			expectedBody: `[{"short_url":"http://localhost:8080/abc","original_url":"https://example.com"}]`,
+		},
+		{
+			name:         "204 No Content - no URLs",
+			userID:       "user-2",
+			serviceURLs:  []model.URL{},
+			expectedCode: http.StatusNoContent,
+		},
+		{
+			name:         "401 Unauthorized - no userID in context",
+			userID:       "",
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "500 Internal Server Error - service error",
+			userID:       "user-3",
+			serviceErr:   errors.New("db error"),
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	Logger, _ := logger.New("debug")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+			if tt.userID != "" {
+				mockService.EXPECT().
+					GetAllByUserID(gomock.Any(), tt.userID).
+					Return(tt.serviceURLs, tt.serviceErr)
+			}
+
+			h := New(mockService, nil, cfg, Logger)
+			req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+			req = req.WithContext(ctxWithUserID(tt.userID))
+			res := httptest.NewRecorder()
+
+			h.GetUserURLs(res, req)
+
+			assert.Equal(t, res.Code, tt.expectedCode)
+			if tt.expectedBody != "" {
+				assert.Equal(t, strings.TrimSpace(res.Body.String()), tt.expectedBody)
+			}
+		})
+	}
+}
+
+func TestAPIDeleteURLs(t *testing.T) {
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+
+	tests := []struct {
+		name         string
+		userID       string
+		body         string
+		ids          []string
+		serviceErr   error
+		expectedCode int
+	}{
+		{
+			name:         "202 Accepted - successful delete",
+			userID:       "user-1",
+			body:         `["abc","def"]`,
+			ids:          []string{"abc", "def"},
+			expectedCode: http.StatusAccepted,
+		},
+		{
+			name:         "401 Unauthorized - no userID",
+			userID:       "",
+			body:         `["abc"]`,
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "400 Bad Request - invalid JSON",
+			userID:       "user-1",
+			body:         `not-json`,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "500 Internal Server Error - service error",
+			userID:       "user-1",
+			body:         `["abc"]`,
+			ids:          []string{"abc"},
+			serviceErr:   errors.New("delete failed"),
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	Logger, _ := logger.New("debug")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+			if tt.userID != "" && tt.ids != nil {
+				mockService.EXPECT().
+					DeleteURLs(gomock.Any(), tt.ids, tt.userID).
+					Return(tt.serviceErr)
+			}
+
+			h := New(mockService, nil, cfg, Logger)
+			req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", strings.NewReader(tt.body))
+			req = req.WithContext(ctxWithUserID(tt.userID))
+			res := httptest.NewRecorder()
+
+			h.APIDeleteURLs(res, req)
+
+			assert.Equal(t, res.Code, tt.expectedCode)
 		})
 	}
 }

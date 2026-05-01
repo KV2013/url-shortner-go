@@ -41,6 +41,44 @@ func (m *MockURLService) EXPECT() *MockURLServiceMockRecorder {
 	return m.recorder
 }
 
+// DeleteURLs mocks base method.
+func (m *MockURLService) DeleteURLs(ctx context.Context, ids []string, userID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteURLs", ctx, ids, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteURLs indicates an expected call of DeleteURLs.
+func (mr *MockURLServiceMockRecorder) DeleteURLs(ctx, ids, userID any) *MockURLServiceDeleteURLsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockURLService)(nil).DeleteURLs), ctx, ids, userID)
+	return &MockURLServiceDeleteURLsCall{Call: call}
+}
+
+// MockURLServiceDeleteURLsCall wrap *gomock.Call
+type MockURLServiceDeleteURLsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockURLServiceDeleteURLsCall) Return(arg0 error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockURLServiceDeleteURLsCall) Do(f func(context.Context, []string, string) error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockURLServiceDeleteURLsCall) DoAndReturn(f func(context.Context, []string, string) error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // GetAllByUserID mocks base method.
 func (m *MockURLService) GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error) {
 	m.ctrl.T.Helper()

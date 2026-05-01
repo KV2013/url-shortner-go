@@ -13,7 +13,7 @@ type URLRepository interface {
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
-	DeleteURLs(ctx context.Context, ids []string) error
+	DeleteURLs(ctx context.Context, ids []model.URL) error
 }
 
 type URLService struct {
@@ -75,6 +75,7 @@ func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, bool) 
 
 func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID string) error {
 	// получить URL по каждому id и проверить, что они принадлежат пользователю
+	var urls []model.URL
 	for _, shortUrl := range shortUrls {
 		url, exists := s.GetByID(ctx, shortUrl)
 		if !exists {
@@ -84,7 +85,8 @@ func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID 
 		if url.UserID != userID {
 			return errors.New("URL с id " + shortUrl + " не принадлежит пользователю")
 		}
+		urls = append(urls, *url)
 	}
 
-	return s.urlRepository.DeleteURLs(ctx, shortUrls)
+	return s.urlRepository.DeleteURLs(ctx, urls)
 }
