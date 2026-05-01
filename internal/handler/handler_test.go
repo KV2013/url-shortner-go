@@ -279,15 +279,16 @@ func TestAPICreate(t *testing.T) {
 }
 
 func TestRedirect(t *testing.T) {
+	cfg := &config.Config{ServerAddress: "localhost:8080", BaseURL: "http://localhost:8080"}
+
 	tests := []struct {
 		name               string
 		id                 string
-		getURLError        error
 		foundURL           *model.URL
-		exists             bool
+		getURLErr          error
 		expectsCallGetByID bool
 		expectedCode       int
-		config             *config.Config
+		expectedLocation   string
 	}{
 		{
 			name: "307 Temporary Redirect - URL found",
@@ -296,60 +297,39 @@ func TestRedirect(t *testing.T) {
 				Short:    "abc123",
 				Original: "https://example.com",
 			},
-			exists:             true,
+			getURLErr:          nil,
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusTemporaryRedirect,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
+			expectedLocation:   "https://example.com",
 		},
 		{
 			name:               "404 Not Found - URL not found",
 			id:                 "unknown-id",
-			exists:             false,
+			getURLErr:          &model.ErrURLNotFound{Short: "unknown-id"},
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusNotFound,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
 		},
 		{
 			name:               "400 Bad Request - empty id",
 			id:                 "",
-			exists:             false,
 			expectsCallGetByID: false,
 			expectedCode:       http.StatusBadRequest,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
 		},
 		{
-			name: "410 Gone - URL deleted",
-			id:   "deleted1",
-			foundURL: &model.URL{
-				Short:       "deleted1",
-				Original:    "https://example.com",
-				DeletedFlag: true,
-			},
-			exists:             true,
+			name:               "410 Gone - URL deleted",
+			id:                 "deleted1",
+			getURLErr:          &model.ErrURLDeleted{Short: "deleted1"},
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusGone,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
 		},
 	}
+
 	Logger, loggerErr := logger.New("debug")
 	if loggerErr != nil {
 		t.Fatalf("не удалось создать логгер: %v", loggerErr)
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Создаём контроллер моков
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -358,26 +338,20 @@ func TestRedirect(t *testing.T) {
 			if tt.expectsCallGetByID {
 				mockService.EXPECT().
 					GetByID(gomock.Any(), tt.id).
-					Return(tt.foundURL, tt.exists)
+					Return(tt.foundURL, tt.getURLErr)
 			}
 
-			handler := New(mockService, nil, tt.config, Logger)
+			handler := New(mockService, nil, cfg, Logger)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)
-
 			res := httptest.NewRecorder()
 
 			handler.Redirect(res, req)
 
-			// Проверяем результаты
-			if res.Code != tt.expectedCode {
-				assert.Equal(t, res.Code, tt.expectedCode)
-			}
-
-			if tt.exists && !tt.foundURL.DeletedFlag {
-				location := res.Header().Get("Location")
-				assert.Equal(t, location, tt.foundURL.Original)
+			assert.Equal(t, res.Code, tt.expectedCode)
+			if tt.expectedLocation != "" {
+				assert.Equal(t, res.Header().Get("Location"), tt.expectedLocation)
 			}
 		})
 	}
