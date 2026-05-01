@@ -47,7 +47,7 @@ func AuthJWT(cfg *config.Config, logger *zap.Logger) func(next http.Handler) htt
 					http.SetCookie(w, &http.Cookie{
 						Name:     tokenCookieName,
 						Value:    tokenString,
-						Expires:  time.Now().Add(auth.TOKEN_EXP),
+						Expires:  time.Now().Add(auth.TokenExp),
 						HttpOnly: true,
 						Path:     "/",
 					})

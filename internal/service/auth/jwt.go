@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-const tokenExp = time.Hour * 3
+const TokenExp = time.Hour * 3
 
 type Claims struct {
 	jwt.RegisteredClaims
@@ -20,7 +20,7 @@ var errInvalidTokenError = errors.New("invalid token")
 func GenerateAccessToken(userID string, secretKey string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
 		},
 		UserID: userID,
 	})
