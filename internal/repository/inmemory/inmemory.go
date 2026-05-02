@@ -79,12 +79,15 @@ func (r *InMemoryRepository) Save(_ context.Context, url *model.URL) error {
 	return nil
 }
 
-func (r *InMemoryRepository) DeleteURLs(_ context.Context, urls []model.URL) error {
+func (r *InMemoryRepository) DeleteUserURLs(_ context.Context, userID string, urls []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for _, url := range urls {
-		delete(r.UrlsByID, url.Short)
+	for _, short := range urls {
+		if url, exists := r.UrlsByID[short]; exists && url.UserID == userID {
+			url.DeletedFlag = true
+			r.UrlsByID[short] = url
+		}
 	}
 	return nil
 }

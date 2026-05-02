@@ -111,7 +111,7 @@ func (r *FileRepository) Close() error {
 	return r.file.Close()
 }
 
-func (r *FileRepository) DeleteURLs(ctx context.Context, urls []model.URL) error {
+func (r *FileRepository) DeleteUserURLs(_ context.Context, _ string, _ []string) error {
 	// TODO: дописать удаление URL из файла
 	return nil
 }

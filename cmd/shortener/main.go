@@ -35,7 +35,7 @@ func main() {
 	}
 	defer repo.Close()
 
-	urlService := service.NewURLService(repo)
+	urlService := service.NewURLService(repo, Logger)
 	handler := handler.New(urlService, repo, config, Logger)
 	mux := router.Init(handler, Logger, config)
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/golang-migrate/migrate/v4"
@@ -21,7 +20,6 @@ var ErrIDAlreadyExists = errors.New("id уже занят")
 
 type SQLXRepository struct {
 	db     *sqlx.DB
-	delCh  chan model.URL
 	logger *zap.Logger
 }
 
@@ -31,13 +29,11 @@ func NewRepository(dsn string, logger *zap.Logger) (*SQLXRepository, error) {
 		return nil, fmt.Errorf("не удалось подключиться к базе данных: %w", err)
 	}
 
-	repo := &SQLXRepository{db: db, delCh: make(chan model.URL, 1024), logger: logger}
+	repo := &SQLXRepository{db: db, logger: logger}
 
 	if err := repo.runMigrations(); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения миграций: %w", err)
 	}
-
-	go repo.startDeleteQueue()
 
 	return repo, nil
 }
@@ -174,70 +170,33 @@ func (r *SQLXRepository) Ping() error {
 	return r.db.Ping()
 }
 
-func (r *SQLXRepository) DeleteURLs(ctx context.Context, urls []model.URL) error {
+func (r *SQLXRepository) DeleteUserURLs(ctx context.Context, userID string, urls []string) error {
+	// $1 — userID, затем $2..$N — short URLs
+	inSQL := fmt.Sprintf("(%s)", placeholders(2, len(urls)))
 
-	for _, url := range urls {
-		if err := r.pushToDeleteQueue(url); err != nil {
-			return fmt.Errorf("ошибка добавления url в очередь на удаление: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *SQLXRepository) pushToDeleteQueue(url model.URL) error {
-	r.delCh <- url
-
-	return nil
-}
-
-func (r *SQLXRepository) startDeleteQueue() {
-	ticker := time.NewTicker(3 * time.Second)
-	var urls []model.URL
-
-	r.logger.Info("запуск очереди на удаление URL")
-	for {
-		select {
-		case url := <-r.delCh:
-			urls = append(urls, url)
-			r.logger.Debug("URL добавлен в очередь на удаление", zap.String("short_url", url.Short), zap.String("original_url", url.Original))
-		case <-ticker.C:
-			if len(urls) == 0 {
-				continue
-			}
-			r.logger.Debug("ticker.C: запуск удаления URL", zap.Int("count", len(urls)))
-			err := r.runDeleteQuery(context.TODO(), urls)
-			if err != nil {
-				r.logger.Error("ошибка при удалении url", zap.Error(err))
-			}
-			urls = nil
-		}
-	}
-}
-
-func (r *SQLXRepository) runDeleteQuery(ctx context.Context, urls []model.URL) error {
-
-	inSQL := fmt.Sprintf("(%s)", placeholders(len(urls)))
-
-	args := make([]interface{}, len(urls))
+	args := make([]interface{}, len(urls)+1)
+	args[0] = userID
 	for i, url := range urls {
-		args[i] = url.Short
+		args[i+1] = url
 	}
 
-	query := fmt.Sprintf("UPDATE urls SET is_deleted = TRUE WHERE short_url IN %s", inSQL)
+	query := fmt.Sprintf(
+		"UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url IN %s AND is_deleted = FALSE",
+		inSQL,
+	)
 	_, err := r.db.ExecContext(ctx, query, args...)
 
 	return err
 }
 
-func placeholders(n int) string {
+// placeholders генерирует строку плейсхолдеров: $start, $start+1, ..., $start+n-1
+func placeholders(start, n int) string {
 	if n <= 0 {
 		return ""
 	}
-	result := "$1"
-	for i := 2; i <= n; i++ {
-		result += fmt.Sprintf(", $%d", i)
+	result := fmt.Sprintf("$%d", start)
+	for i := 1; i < n; i++ {
+		result += fmt.Sprintf(", $%d", start+i)
 	}
-
 	return result
 }

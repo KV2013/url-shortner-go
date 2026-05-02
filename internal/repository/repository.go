@@ -16,7 +16,7 @@ type Repository interface {
 	SaveMany(ctx context.Context, urls []*model.URL) error
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
-	DeleteURLs(ctx context.Context, urls []model.URL) error
+	DeleteUserURLs(ctx context.Context, userID string, urls []string) error
 	Ping() error
 	Close() error
 }
