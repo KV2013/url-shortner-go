@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler/mocks"
 	"github.com/KV2013/url-shortner-go/internal/logger"
+	"github.com/KV2013/url-shortner-go/internal/middleware"
 	"github.com/KV2013/url-shortner-go/internal/model"
 	"github.com/magiconair/properties/assert"
 	"go.uber.org/mock/gomock"
@@ -111,11 +113,11 @@ func TestCreate(t *testing.T) {
 
 			if tt.url != "" && !tt.expectedError {
 				mockService.EXPECT().
-					SaveURL(gomock.Any(), tt.url).
+					SaveURL(gomock.Any(), tt.url, gomock.Any()).
 					Return(tt.storedURL, tt.saveURLError)
 			} else if tt.url != "" {
 				mockService.EXPECT().
-					SaveURL(gomock.Any(), tt.url).
+					SaveURL(gomock.Any(), tt.url, gomock.Any()).
 					Return(nil, tt.saveURLError)
 			}
 
@@ -246,11 +248,11 @@ func TestAPICreate(t *testing.T) {
 
 			if tt.body != "" && !tt.expectedError {
 				mockService.EXPECT().
-					SaveURL(gomock.Any(), tt.url).
+					SaveURL(gomock.Any(), tt.url, gomock.Any()).
 					Return(tt.storedURL, tt.saveURLError)
 			} else if tt.url != "" {
 				mockService.EXPECT().
-					SaveURL(gomock.Any(), tt.url).
+					SaveURL(gomock.Any(), tt.url, gomock.Any()).
 					Return(nil, tt.saveURLError)
 			}
 
@@ -277,15 +279,16 @@ func TestAPICreate(t *testing.T) {
 }
 
 func TestRedirect(t *testing.T) {
+	cfg := &config.Config{ServerAddress: "localhost:8080", BaseURL: "http://localhost:8080"}
+
 	tests := []struct {
 		name               string
 		id                 string
-		getURLError        error
 		foundURL           *model.URL
-		exists             bool
+		getURLErr          error
 		expectsCallGetByID bool
 		expectedCode       int
-		config             *config.Config
+		expectedLocation   string
 	}{
 		{
 			name: "307 Temporary Redirect - URL found",
@@ -294,44 +297,39 @@ func TestRedirect(t *testing.T) {
 				Short:    "abc123",
 				Original: "https://example.com",
 			},
-			exists:             true,
+			getURLErr:          nil,
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusTemporaryRedirect,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
+			expectedLocation:   "https://example.com",
 		},
 		{
 			name:               "404 Not Found - URL not found",
 			id:                 "unknown-id",
-			exists:             false,
+			getURLErr:          &model.ErrURLNotFound{Short: "unknown-id"},
 			expectsCallGetByID: true,
 			expectedCode:       http.StatusNotFound,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
 		},
 		{
 			name:               "400 Bad Request - empty id",
 			id:                 "",
-			exists:             false,
 			expectsCallGetByID: false,
 			expectedCode:       http.StatusBadRequest,
-			config: &config.Config{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-			},
+		},
+		{
+			name:               "410 Gone - URL deleted",
+			id:                 "deleted1",
+			getURLErr:          &model.ErrURLDeleted{Short: "deleted1"},
+			expectsCallGetByID: true,
+			expectedCode:       http.StatusGone,
 		},
 	}
+
 	Logger, loggerErr := logger.New("debug")
 	if loggerErr != nil {
 		t.Fatalf("не удалось создать логгер: %v", loggerErr)
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Создаём контроллер моков
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -340,27 +338,157 @@ func TestRedirect(t *testing.T) {
 			if tt.expectsCallGetByID {
 				mockService.EXPECT().
 					GetByID(gomock.Any(), tt.id).
-					Return(tt.foundURL, tt.exists)
+					Return(tt.foundURL, tt.getURLErr)
 			}
 
-			handler := New(mockService, nil, tt.config, Logger)
+			handler := New(mockService, nil, cfg, Logger)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, nil)
 			req.SetPathValue("id", tt.id)
-
 			res := httptest.NewRecorder()
 
 			handler.Redirect(res, req)
 
-			// Проверяем результаты
-			if res.Code != tt.expectedCode {
-				assert.Equal(t, res.Code, tt.expectedCode)
+			assert.Equal(t, res.Code, tt.expectedCode)
+			if tt.expectedLocation != "" {
+				assert.Equal(t, res.Header().Get("Location"), tt.expectedLocation)
+			}
+		})
+	}
+}
+
+func ctxWithUserID(userID string) context.Context {
+	return context.WithValue(context.Background(), middleware.UserIDContextKey, userID)
+}
+
+func TestGetUserURLs(t *testing.T) {
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+
+	tests := []struct {
+		name         string
+		userID       string
+		serviceURLs  []model.URL
+		serviceErr   error
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:   "200 OK - has URLs",
+			userID: "user-1",
+			serviceURLs: []model.URL{
+				{Short: "abc", Original: "https://example.com", UserID: "user-1"},
+			},
+			expectedCode: http.StatusOK,
+			expectedBody: `[{"short_url":"http://localhost:8080/abc","original_url":"https://example.com"}]`,
+		},
+		{
+			name:         "204 No Content - no URLs",
+			userID:       "user-2",
+			serviceURLs:  []model.URL{},
+			expectedCode: http.StatusNoContent,
+		},
+		{
+			name:         "401 Unauthorized - no userID in context",
+			userID:       "",
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "500 Internal Server Error - service error",
+			userID:       "user-3",
+			serviceErr:   errors.New("db error"),
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	Logger, _ := logger.New("debug")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+			if tt.userID != "" {
+				mockService.EXPECT().
+					GetAllByUserID(gomock.Any(), tt.userID).
+					Return(tt.serviceURLs, tt.serviceErr)
 			}
 
-			if tt.exists {
-				location := res.Header().Get("Location")
-				assert.Equal(t, location, tt.foundURL.Original)
+			h := New(mockService, nil, cfg, Logger)
+			req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+			req = req.WithContext(ctxWithUserID(tt.userID))
+			res := httptest.NewRecorder()
+
+			h.GetUserURLs(res, req)
+
+			assert.Equal(t, res.Code, tt.expectedCode)
+			if tt.expectedBody != "" {
+				assert.Equal(t, strings.TrimSpace(res.Body.String()), tt.expectedBody)
 			}
+		})
+	}
+}
+
+func TestAPIDeleteURLs(t *testing.T) {
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+
+	tests := []struct {
+		name         string
+		userID       string
+		body         string
+		ids          []string
+		serviceErr   error
+		expectedCode int
+	}{
+		{
+			name:         "202 Accepted - successful delete",
+			userID:       "user-1",
+			body:         `["abc","def"]`,
+			ids:          []string{"abc", "def"},
+			expectedCode: http.StatusAccepted,
+		},
+		{
+			name:         "401 Unauthorized - no userID",
+			userID:       "",
+			body:         `["abc"]`,
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "400 Bad Request - invalid JSON",
+			userID:       "user-1",
+			body:         `not-json`,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "500 Internal Server Error - service error",
+			userID:       "user-1",
+			body:         `["abc"]`,
+			ids:          []string{"abc"},
+			serviceErr:   errors.New("delete failed"),
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	Logger, _ := logger.New("debug")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+			if tt.userID != "" && tt.ids != nil {
+				mockService.EXPECT().
+					DeleteURLs(gomock.Any(), tt.ids, tt.userID).
+					Return(tt.serviceErr)
+			}
+
+			h := New(mockService, nil, cfg, Logger)
+			req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", strings.NewReader(tt.body))
+			req = req.WithContext(ctxWithUserID(tt.userID))
+			res := httptest.NewRecorder()
+
+			h.APIDeleteURLs(res, req)
+
+			assert.Equal(t, res.Code, tt.expectedCode)
 		})
 	}
 }

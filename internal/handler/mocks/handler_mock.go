@@ -41,12 +41,89 @@ func (m *MockURLService) EXPECT() *MockURLServiceMockRecorder {
 	return m.recorder
 }
 
+// DeleteURLs mocks base method.
+func (m *MockURLService) DeleteURLs(ctx context.Context, ids []string, userID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteURLs", ctx, ids, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteURLs indicates an expected call of DeleteURLs.
+func (mr *MockURLServiceMockRecorder) DeleteURLs(ctx, ids, userID any) *MockURLServiceDeleteURLsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockURLService)(nil).DeleteURLs), ctx, ids, userID)
+	return &MockURLServiceDeleteURLsCall{Call: call}
+}
+
+// MockURLServiceDeleteURLsCall wrap *gomock.Call
+type MockURLServiceDeleteURLsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockURLServiceDeleteURLsCall) Return(arg0 error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockURLServiceDeleteURLsCall) Do(f func(context.Context, []string, string) error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockURLServiceDeleteURLsCall) DoAndReturn(f func(context.Context, []string, string) error) *MockURLServiceDeleteURLsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// GetAllByUserID mocks base method.
+func (m *MockURLService) GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllByUserID", ctx, userID)
+	ret0, _ := ret[0].([]model.URL)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllByUserID indicates an expected call of GetAllByUserID.
+func (mr *MockURLServiceMockRecorder) GetAllByUserID(ctx, userID any) *MockURLServiceGetAllByUserIDCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllByUserID", reflect.TypeOf((*MockURLService)(nil).GetAllByUserID), ctx, userID)
+	return &MockURLServiceGetAllByUserIDCall{Call: call}
+}
+
+// MockURLServiceGetAllByUserIDCall wrap *gomock.Call
+type MockURLServiceGetAllByUserIDCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockURLServiceGetAllByUserIDCall) Return(arg0 []model.URL, arg1 error) *MockURLServiceGetAllByUserIDCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockURLServiceGetAllByUserIDCall) Do(f func(context.Context, string) ([]model.URL, error)) *MockURLServiceGetAllByUserIDCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockURLServiceGetAllByUserIDCall) DoAndReturn(f func(context.Context, string) ([]model.URL, error)) *MockURLServiceGetAllByUserIDCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // GetByID mocks base method.
-func (m *MockURLService) GetByID(ctx context.Context, id string) (*model.URL, bool) {
+func (m *MockURLService) GetByID(ctx context.Context, id string) (*model.URL, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id)
 	ret0, _ := ret[0].(*model.URL)
-	ret1, _ := ret[1].(bool)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
@@ -63,36 +140,36 @@ type MockURLServiceGetByIDCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockURLServiceGetByIDCall) Return(arg0 *model.URL, arg1 bool) *MockURLServiceGetByIDCall {
+func (c *MockURLServiceGetByIDCall) Return(arg0 *model.URL, arg1 error) *MockURLServiceGetByIDCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockURLServiceGetByIDCall) Do(f func(context.Context, string) (*model.URL, bool)) *MockURLServiceGetByIDCall {
+func (c *MockURLServiceGetByIDCall) Do(f func(context.Context, string) (*model.URL, error)) *MockURLServiceGetByIDCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockURLServiceGetByIDCall) DoAndReturn(f func(context.Context, string) (*model.URL, bool)) *MockURLServiceGetByIDCall {
+func (c *MockURLServiceGetByIDCall) DoAndReturn(f func(context.Context, string) (*model.URL, error)) *MockURLServiceGetByIDCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // SaveManyURL mocks base method.
-func (m *MockURLService) SaveManyURL(ctx context.Context, urls []string) ([]model.URL, error) {
+func (m *MockURLService) SaveManyURL(ctx context.Context, urls []string, userID string) ([]model.URL, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveManyURL", ctx, urls)
+	ret := m.ctrl.Call(m, "SaveManyURL", ctx, urls, userID)
 	ret0, _ := ret[0].([]model.URL)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveManyURL indicates an expected call of SaveManyURL.
-func (mr *MockURLServiceMockRecorder) SaveManyURL(ctx, urls any) *MockURLServiceSaveManyURLCall {
+func (mr *MockURLServiceMockRecorder) SaveManyURL(ctx, urls, userID any) *MockURLServiceSaveManyURLCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveManyURL", reflect.TypeOf((*MockURLService)(nil).SaveManyURL), ctx, urls)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveManyURL", reflect.TypeOf((*MockURLService)(nil).SaveManyURL), ctx, urls, userID)
 	return &MockURLServiceSaveManyURLCall{Call: call}
 }
 
@@ -108,30 +185,30 @@ func (c *MockURLServiceSaveManyURLCall) Return(arg0 []model.URL, arg1 error) *Mo
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockURLServiceSaveManyURLCall) Do(f func(context.Context, []string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
+func (c *MockURLServiceSaveManyURLCall) Do(f func(context.Context, []string, string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockURLServiceSaveManyURLCall) DoAndReturn(f func(context.Context, []string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
+func (c *MockURLServiceSaveManyURLCall) DoAndReturn(f func(context.Context, []string, string) ([]model.URL, error)) *MockURLServiceSaveManyURLCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // SaveURL mocks base method.
-func (m *MockURLService) SaveURL(ctx context.Context, url string) (*model.URL, error) {
+func (m *MockURLService) SaveURL(ctx context.Context, url, userID string) (*model.URL, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveURL", ctx, url)
+	ret := m.ctrl.Call(m, "SaveURL", ctx, url, userID)
 	ret0, _ := ret[0].(*model.URL)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveURL indicates an expected call of SaveURL.
-func (mr *MockURLServiceMockRecorder) SaveURL(ctx, url any) *MockURLServiceSaveURLCall {
+func (mr *MockURLServiceMockRecorder) SaveURL(ctx, url, userID any) *MockURLServiceSaveURLCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveURL", reflect.TypeOf((*MockURLService)(nil).SaveURL), ctx, url)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveURL", reflect.TypeOf((*MockURLService)(nil).SaveURL), ctx, url, userID)
 	return &MockURLServiceSaveURLCall{Call: call}
 }
 
@@ -147,13 +224,13 @@ func (c *MockURLServiceSaveURLCall) Return(arg0 *model.URL, arg1 error) *MockURL
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockURLServiceSaveURLCall) Do(f func(context.Context, string) (*model.URL, error)) *MockURLServiceSaveURLCall {
+func (c *MockURLServiceSaveURLCall) Do(f func(context.Context, string, string) (*model.URL, error)) *MockURLServiceSaveURLCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockURLServiceSaveURLCall) DoAndReturn(f func(context.Context, string) (*model.URL, error)) *MockURLServiceSaveURLCall {
+func (c *MockURLServiceSaveURLCall) DoAndReturn(f func(context.Context, string, string) (*model.URL, error)) *MockURLServiceSaveURLCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

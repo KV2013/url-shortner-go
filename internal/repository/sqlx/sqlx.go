@@ -13,21 +13,23 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 var ErrIDAlreadyExists = errors.New("id уже занят")
 
 type SQLXRepository struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *zap.Logger
 }
 
-func NewRepository(dsn string) (*SQLXRepository, error) {
+func NewRepository(dsn string, logger *zap.Logger) (*SQLXRepository, error) {
 	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось подключиться к базе данных: %w", err)
 	}
 
-	repo := &SQLXRepository{db: db}
+	repo := &SQLXRepository{db: db, logger: logger}
 
 	if err := repo.runMigrations(); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения миграций: %w", err)
@@ -57,29 +59,46 @@ func (r *SQLXRepository) runMigrations() error {
 func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bool) {
 	var url model.URL
 	err := r.db.GetContext(ctx, &url, `
-		SELECT short_url AS short, original_url AS original
+		SELECT short_url AS short, original_url AS original, user_id, is_deleted
 		FROM urls
 		WHERE short_url = $1
 	`, id)
 	if err != nil {
 		return nil, false
 	}
+	if url.DeletedFlag {
+		r.logger.Debug("URL удалён", zap.String("id", id), zap.String("url", url.Original))
+	}
 
 	return &url, true
 }
 
+func (r *SQLXRepository) GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error) {
+	var urls []model.URL
+	err := r.db.SelectContext(ctx, &urls, `
+		SELECT short_url AS short, original_url AS original, user_id
+		FROM urls
+		WHERE user_id = $1
+		AND is_deleted = FALSE
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	return urls, nil
+}
+
 func (r *SQLXRepository) Save(ctx context.Context, url *model.URL) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO urls (short_url, original_url)
-		VALUES ($1, $2)
-	`, url.Short, url.Original)
+		INSERT INTO urls (short_url, original_url, user_id)
+		VALUES ($1, $2, $3)
+	`, url.Short, url.Original, url.UserID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			if pgErr.ConstraintName == "u_idx_urls_original_url" {
 				var existing model.URL
 				if err := r.db.GetContext(ctx, &existing, `
-					SELECT short_url AS short, original_url AS original
+					SELECT short_url AS short, original_url AS original, user_id
 					FROM urls WHERE original_url = $1
 				`, url.Original); err != nil {
 					return fmt.Errorf("ошибка поиска существующего url: %w", err)
@@ -103,15 +122,15 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 
 	stmt, err := tx.PreparexContext(ctx, `
 		WITH ins AS (
-			INSERT INTO urls (short_url, original_url)
-			VALUES ($1, $2)
+			INSERT INTO urls (short_url, original_url, user_id)
+			VALUES ($1, $2, $3)
 			ON CONFLICT (original_url) DO NOTHING
-			RETURNING short_url, original_url
+			RETURNING short_url, original_url, user_id
 		)
-		SELECT short_url AS short, original_url AS original, FALSE AS conflicted
+		SELECT short_url AS short, original_url AS original, user_id, FALSE AS conflicted
 		FROM ins
 		UNION ALL
-		SELECT short_url AS short, original_url AS original, TRUE AS conflicted
+		SELECT short_url AS short, original_url AS original, user_id, TRUE AS conflicted
 		FROM urls
 		WHERE original_url = $2
 		AND NOT EXISTS (
@@ -128,7 +147,7 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 			model.URL
 			Conflicted bool `db:"conflicted"`
 		}
-		if err := stmt.GetContext(ctx, &insResult, url.Short, url.Original); err != nil {
+		if err := stmt.GetContext(ctx, &insResult, url.Short, url.Original, url.UserID); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation { // конфликт по short_url на всякий случай
 				return ErrIDAlreadyExists
@@ -149,4 +168,35 @@ func (r *SQLXRepository) Close() error {
 
 func (r *SQLXRepository) Ping() error {
 	return r.db.Ping()
+}
+
+func (r *SQLXRepository) DeleteUserURLs(ctx context.Context, userID string, urls []string) error {
+	// $1 — userID, затем $2..$N — short URLs
+	inSQL := fmt.Sprintf("(%s)", placeholders(2, len(urls)))
+
+	args := make([]interface{}, len(urls)+1)
+	args[0] = userID
+	for i, url := range urls {
+		args[i+1] = url
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url IN %s AND is_deleted = FALSE",
+		inSQL,
+	)
+	_, err := r.db.ExecContext(ctx, query, args...)
+
+	return err
+}
+
+// placeholders генерирует строку плейсхолдеров: $start, $start+1, ..., $start+n-1
+func placeholders(start, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	result := fmt.Sprintf("$%d", start)
+	for i := 1; i < n; i++ {
+		result += fmt.Sprintf(", $%d", start+i)
+	}
+	return result
 }

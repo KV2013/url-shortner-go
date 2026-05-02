@@ -1,8 +1,10 @@
 package model
 
 type URL struct {
-	Original string `json:"original_url"`
-	Short    string `json:"short_url"`
+	Original    string `json:"original_url" db:"original"`
+	Short       string `json:"short_url"    db:"short"`
+	UserID      string `json:"user_id"      db:"user_id"`
+	DeletedFlag bool   `json:"-"            db:"is_deleted"`
 }
 
 type CreateURLRequest struct {
@@ -33,4 +35,20 @@ type ErrURLAlreadyExists struct {
 
 func (e *ErrURLAlreadyExists) Error() string {
 	return "URL уже существует: " + e.URL.Short
+}
+
+type ErrURLNotFound struct {
+	Short string
+}
+
+func (e *ErrURLNotFound) Error() string {
+	return "URL не найден: " + e.Short
+}
+
+type ErrURLDeleted struct {
+	Short string
+}
+
+func (e *ErrURLDeleted) Error() string {
+	return "URL удален: " + e.Short
 }

@@ -82,10 +82,36 @@ func (r *FileRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 	return nil
 }
 
+func (r *FileRepository) GetAllByUserID(_ context.Context, userID string) ([]model.URL, error) {
+	if _, err := r.file.Seek(0, 0); err != nil {
+		return nil, err
+	}
+	scanner := bufio.NewScanner(r.file)
+	var result []model.URL
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+		var url model.URL
+		if err := json.Unmarshal(scanner.Bytes(), &url); err != nil {
+			continue
+		}
+		if url.UserID == userID {
+			result = append(result, url)
+		}
+	}
+	return result, nil
+}
+
 func (r *FileRepository) Ping() error {
 	return nil
 }
 
 func (r *FileRepository) Close() error {
 	return r.file.Close()
+}
+
+func (r *FileRepository) DeleteUserURLs(_ context.Context, _ string, _ []string) error {
+	// TODO: дописать удаление URL из файла
+	return nil
 }
