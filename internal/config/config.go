@@ -9,6 +9,8 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	JWTSecretKey    string `env:"JWT_SECRET_KEY"`
+	AuditFile       string `env:"AUDIT_FILE"`
+	AuditURL        string `env:"AUDIT_URL"`
 }
 
 func NewConfig() (*Config, error) {
@@ -44,6 +46,12 @@ func NewConfig() (*Config, error) {
 	}
 	if flagJWTSecretKey != "" {
 		cfg.JWTSecretKey = flagJWTSecretKey
+	}
+	if flagAuditFile != "" {
+		cfg.AuditFile = flagAuditFile
+	}
+	if flagAuditURL != "" {
+		cfg.AuditURL = flagAuditURL
 	}
 
 	return &cfg, nil

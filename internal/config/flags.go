@@ -10,6 +10,8 @@ var flagLogLevel string
 var flagFileStoragePath string
 var flagDatabaseDSN string
 var flagJWTSecretKey string
+var flagAuditFile string
+var flagAuditURL string
 
 func parseFlags() {
 	if flag.Parsed() {
@@ -22,5 +24,7 @@ func parseFlags() {
 	flag.StringVarP(&flagFileStoragePath, "filestoragepath", "f", "", "")
 	flag.StringVarP(&flagDatabaseDSN, "database-dsn", "d", "", "database DSN")
 	flag.StringVarP(&flagJWTSecretKey, "jwt-secret", "j", "", "JWT signing secret key")
+	flag.StringVarP(&flagAuditFile, "audit-file", "", "", "path to audit log file")
+	flag.StringVarP(&flagAuditURL, "audit-url", "", "", "URL of remote audit server")
 	flag.Parse()
 }
