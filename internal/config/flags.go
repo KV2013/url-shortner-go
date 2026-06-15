@@ -12,6 +12,7 @@ var flagDatabaseDSN string
 var flagJWTSecretKey string
 var flagAuditFile string
 var flagAuditURL string
+var flagEnablePprof bool
 
 func parseFlags() {
 	if flag.Parsed() {
@@ -26,5 +27,6 @@ func parseFlags() {
 	flag.StringVarP(&flagJWTSecretKey, "jwt-secret", "j", "", "JWT signing secret key")
 	flag.StringVarP(&flagAuditFile, "audit-file", "", "", "path to audit log file")
 	flag.StringVarP(&flagAuditURL, "audit-url", "", "", "URL of remote audit server")
+	flag.BoolVarP(&flagEnablePprof, "enable-pprof", "p", false, "enable pprof debug server on :8082")
 	flag.Parse()
 }

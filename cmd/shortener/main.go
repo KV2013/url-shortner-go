@@ -55,6 +55,15 @@ func main() {
 		}
 	}()
 
+	if config.EnablePprof {
+		go func() {
+			Logger.Info("pprof сервер запущен", zap.String("addr", ":8082"))
+			if err := http.ListenAndServe(":8082", nil); err != nil {
+				Logger.Error("ошибка pprof сервера", zap.Error(err))
+			}
+		}()
+	}
+
 	// Ожидаем сигналов для graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

@@ -11,6 +11,7 @@ type Config struct {
 	JWTSecretKey    string `env:"JWT_SECRET_KEY"`
 	AuditFile       string `env:"AUDIT_FILE"`
 	AuditURL        string `env:"AUDIT_URL"`
+	EnablePprof     bool   `env:"ENABLE_PPROF"`
 }
 
 func NewConfig() (*Config, error) {
@@ -52,6 +53,9 @@ func NewConfig() (*Config, error) {
 	}
 	if flagAuditURL != "" {
 		cfg.AuditURL = flagAuditURL
+	}
+	if flagEnablePprof {
+		cfg.EnablePprof = true
 	}
 
 	return &cfg, nil
