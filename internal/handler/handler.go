@@ -112,6 +112,10 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	}
 	err = easyjson.Unmarshal(reqBody, &decoded)
 	if err != nil {
+		h.logger.Warn("api/shorten: ошибка парсинга JSON",
+			zap.Error(err),
+			zap.ByteString("body", reqBody),
+		)
 		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -163,6 +167,11 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 
 	var requestItems []model.CreateURLBatchRequestItem
 	if err := json.Unmarshal(reqBody, &requestItems); err != nil {
+		h.logger.Warn("api/shorten/batch: ошибка парсинга JSON",
+			zap.Error(err),
+			zap.Int("body_len", len(reqBody)),
+			zap.String("body_head", string(reqBody[:min(len(reqBody), 300)])),
+		)
 		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -183,6 +192,11 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 			)
 			return
 		}
+		h.logger.Warn("api/shorten/batch: ошибка сохранения URL",
+			zap.Error(err),
+			zap.Int("items_count", len(originalURLs)),
+			zap.String("first_url", originalURLs[0]),
+		)
 		h.writeJSONError(res, "ошибка при сохранении URL: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -305,11 +319,20 @@ func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 	var urlIDs []string
 	if err := json.Unmarshal(reqBody, &urlIDs); err != nil {
+		h.logger.Warn("delete: ошибка парсинга JSON",
+			zap.Error(err),
+			zap.ByteString("body", reqBody),
+		)
 		h.writeJSONError(res, "ошибка парсинга запроса: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := h.urlService.DeleteURLs(req.Context(), urlIDs, userID); err != nil {
+		h.logger.Warn("delete: ошибка удаления URL",
+			zap.Error(err),
+			zap.Int("ids_count", len(urlIDs)),
+			zap.Strings("ids_head", urlIDs[:min(len(urlIDs), 5)]),
+		)
 		h.writeJSONError(res, "ошибка при удалении URL: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
