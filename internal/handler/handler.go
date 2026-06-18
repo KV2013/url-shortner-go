@@ -1,3 +1,4 @@
+// Package handler предоставляет HTTP-обработчики для сервиса сокращения URL.
 package handler
 
 import (
@@ -14,6 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// URLService определяет контракт сервисного слоя для работы с URL.
+//
 //go:generate go run go.uber.org/mock/mockgen -source=handler.go -destination=mocks/handler_mock.go -package=mocks -typed
 type URLService interface {
 	SaveURL(ctx context.Context, url string, userID string) (*model.URL, error)
@@ -28,10 +31,12 @@ func userIDFromContext(ctx context.Context) string {
 	return id
 }
 
+// Pinger определяет контракт для проверки работоспособности хранилища.
 type Pinger interface {
 	Ping() error
 }
 
+// URLHandler обрабатывает HTTP-запросы к сервису сокращения URL.
 type URLHandler struct {
 	urlService URLService
 	pinger     Pinger
@@ -47,6 +52,7 @@ func (h *URLHandler) writeJSONError(res http.ResponseWriter, errMsg string, stat
 	}
 }
 
+// New создаёт новый экземпляр URLHandler.
 func New(urlService URLService, pinger Pinger, config *config.Config, logger *zap.Logger) *URLHandler {
 	return &URLHandler{
 		urlService: urlService,
@@ -56,6 +62,9 @@ func New(urlService URLService, pinger Pinger, config *config.Config, logger *za
 	}
 }
 
+// Create обрабатывает POST / — создание короткой ссылки из текстового тела.
+// Принимает URL в теле запроса как text/plain. Возвращает 201 с коротким URL,
+// 409 если URL уже существует, 400 при ошибке.
 func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	reqBody, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -101,6 +110,9 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// APICreate обрабатывает POST /api/shorten — создание короткой ссылки из JSON.
+// Принимает {"url":"..."}, возвращает {"result":"короткий_url"}.
+// Возвращает 201 при успехе, 409 при конфликте, 400 при ошибке.
 func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	var decoded model.CreateURLRequest
 	res.Header().Set("Content-Type", "application/json")
@@ -156,6 +168,10 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// APICreateBatch обрабатывает POST /api/shorten/batch — пакетное создание коротких ссылок.
+// Принимает [{"correlation_id":"...","original_url":"..."}], возвращает
+// [{"correlation_id":"...","short_url":"..."}].
+// Возвращает 201 при успехе, 409 при конфликте, 400 при ошибке.
 func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
@@ -225,6 +241,9 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	}
 }
 
+// Redirect обрабатывает GET /{id} — перенаправление на оригинальный URL.
+// Возвращает 307 TemporaryRedirect при успехе, 404 если URL не найден,
+// 410 Gone если URL удалён.
 func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 	urlID := req.PathValue("id")
 	if urlID == "" {
@@ -253,6 +272,8 @@ func (h *URLHandler) Redirect(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, url.Original, http.StatusTemporaryRedirect)
 }
 
+// Ping обрабатывает GET /ping — проверка работоспособности хранилища.
+// Возвращает 200 если хранилище доступно, 500 в противном случае.
 func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
 	if err := h.pinger.Ping(); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
@@ -261,6 +282,9 @@ func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
+// GetUserURLs обрабатывает GET /api/user/urls — получение всех URL пользователя.
+// Возвращает JSON-массив коротких и оригинальных URL, 401 если не авторизован,
+// 204 если URL отсутствуют, 500 при ошибке хранилища.
 func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
@@ -302,6 +326,10 @@ func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 	_, _ = res.Write(body)
 }
 
+// APIDeleteURLs обрабатывает DELETE /api/user/urls — soft-delete URL пользователя.
+// Принимает JSON-массив идентификаторов ["id1","id2"], возвращает 202 Accepted.
+// Фактическое удаление происходит асинхронно в фоновой очереди.
+// Возвращает 401 если не авторизован, 400 при невалидном JSON, 500 при ошибке.
 func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
