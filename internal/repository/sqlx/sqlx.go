@@ -126,7 +126,7 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 		WITH ins AS (
 			INSERT INTO urls (short_url, original_url, user_id)
 			VALUES ($1, $2, $3)
-			ON CONFLICT (original_url) DO NOTHING
+			ON CONFLICT (original_url, deleted_at) DO NOTHING
 			RETURNING short_url, original_url, user_id
 		)
 		SELECT short_url AS short, original_url AS original, user_id, FALSE AS conflicted
