@@ -1,0 +1,1 @@
+-- no-op: откат backfill-данных не имеет смысла, колонка удаляется в 000005_urls_add_deleted_at.down.sql
