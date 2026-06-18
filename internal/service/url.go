@@ -153,9 +153,3 @@ func (s *URLService) startDeleteQueue() {
 		}
 	}
 }
-
-// func (r *SQLXRepository) pushToDeleteQueue(url model.URL, userID string) error {
-// 	r.delCh <- url
-
-// 	return nil
-// }

@@ -501,15 +501,15 @@ func TestAPICreateBatch(t *testing.T) {
 	}
 
 	tests := []struct {
-		name              string
-		userID            string
-		body              string
-		originalURLs      []string
-		savedURLs         []model.URL
-		saveManyErr       error
-		config            *config.Config
-		want              want
-		expectSaveMany    bool
+		name           string
+		userID         string
+		body           string
+		originalURLs   []string
+		savedURLs      []model.URL
+		saveManyErr    error
+		config         *config.Config
+		want           want
+		expectSaveMany bool
 	}{
 		{
 			name:         "201 Created - batch with multiple items",
