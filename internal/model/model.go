@@ -1,10 +1,13 @@
 package model
 
+import "time"
+
 type URL struct {
-	Original    string `json:"original_url" db:"original"`
-	Short       string `json:"short_url"    db:"short"`
-	UserID      string `json:"user_id"      db:"user_id"`
-	DeletedFlag bool   `json:"-"            db:"is_deleted"`
+	Original    string     `json:"original_url" db:"original"`
+	Short       string     `json:"short_url"    db:"short"`
+	UserID      string     `json:"user_id"      db:"user_id"`
+	DeletedFlag bool       `json:"-"            db:"is_deleted"`
+	DeletedAt   *time.Time `json:"-"            db:"deleted_at"`
 }
 
 type CreateURLRequest struct {

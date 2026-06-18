@@ -90,7 +90,7 @@ func (s *URLService) GetByID(ctx context.Context, id string) (*model.URL, error)
 		return nil, &model.ErrURLNotFound{Short: id}
 	}
 
-	if url.DeletedFlag {
+	if url.DeletedAt != nil {
 		return nil, &model.ErrURLDeleted{Short: id}
 	}
 

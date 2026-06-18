@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/model"
 )
@@ -85,7 +86,9 @@ func (r *InMemoryRepository) DeleteUserURLs(_ context.Context, userID string, ur
 
 	for _, short := range urls {
 		if url, exists := r.UrlsByID[short]; exists && url.UserID == userID {
+			now := time.Now()
 			url.DeletedFlag = true
+			url.DeletedAt = &now
 			r.UrlsByID[short] = url
 		}
 	}
