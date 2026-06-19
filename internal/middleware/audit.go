@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -128,7 +127,7 @@ func RequestAuditor(ctx context.Context, cfg *config.Config, logger *zap.Logger)
 	if cfg.AuditFile != "" {
 		la, err := NewLocalAuditor(cfg.AuditFile)
 		if err != nil {
-			log.Printf("RequestAuditor: failed to create LocalAuditor: %v", err)
+			logger.Error("RequestAuditor: failed to create LocalAuditor: %v", zap.Error(err))
 		} else {
 			observers = append(observers, la)
 			logger.Debug("Local request auditor added", zap.String("AuditFile", cfg.AuditFile))

@@ -124,7 +124,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 	}
 	err = easyjson.Unmarshal(reqBody, &decoded)
 	if err != nil {
-		h.logger.Warn("api/shorten: ошибка парсинга JSON",
+		h.logger.Debug("api/shorten: ошибка парсинга JSON",
 			zap.Error(err),
 			zap.ByteString("body", reqBody),
 		)
@@ -183,7 +183,7 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 
 	var requestItems []model.CreateURLBatchRequestItem
 	if err := json.Unmarshal(reqBody, &requestItems); err != nil {
-		h.logger.Warn("api/shorten/batch: ошибка парсинга JSON",
+		h.logger.Debug("api/shorten/batch: ошибка парсинга JSON",
 			zap.Error(err),
 			zap.Int("body_len", len(reqBody)),
 			zap.String("body_head", string(reqBody[:min(len(reqBody), 300)])),
@@ -347,7 +347,7 @@ func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 	var urlIDs []string
 	if err := json.Unmarshal(reqBody, &urlIDs); err != nil {
-		h.logger.Warn("delete: ошибка парсинга JSON",
+		h.logger.Error("delete: ошибка парсинга JSON",
 			zap.Error(err),
 			zap.ByteString("body", reqBody),
 		)
@@ -356,7 +356,7 @@ func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := h.urlService.DeleteURLs(req.Context(), urlIDs, userID); err != nil {
-		h.logger.Warn("delete: ошибка удаления URL",
+		h.logger.Error("delete: ошибка удаления URL",
 			zap.Error(err),
 			zap.Int("ids_count", len(urlIDs)),
 			zap.Strings("ids_head", urlIDs[:min(len(urlIDs), 5)]),
