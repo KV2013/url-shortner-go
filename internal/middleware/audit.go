@@ -50,6 +50,35 @@ type AuditObserver interface {
 	Notify(ctx context.Context, event AuditEvent) error
 }
 
+// observerWithSemaphore оборачивает AuditObserver и ограничивает число
+// одновременных вызовов Notify с помощью буферизированного канала-семафора.
+// У каждого наблюдателя свой семафор — медленный наблюдатель не блокирует быстрого.
+type observerWithSemaphore struct {
+	observer AuditObserver
+	sem      chan struct{}
+}
+
+func newObserverWithSemaphore(obs AuditObserver, maxConcurrent int) *observerWithSemaphore {
+	return &observerWithSemaphore{
+		observer: obs,
+		sem:      make(chan struct{}, maxConcurrent),
+	}
+}
+
+// notify запускает observer.Notify в горутине, ограничивая параллелизм семафором.
+// HTTP-запрос не блокируется — горутина ждёт семафор внутри себя.
+func (o *observerWithSemaphore) notify(ctx context.Context, event AuditEvent, logger *zap.Logger) {
+	go func() {
+		o.sem <- struct{}{}        // занять слот (ждёт если все заняты)
+		defer func() { <-o.sem }() // освободить слот
+		if err := o.observer.Notify(ctx, event); err != nil {
+			logger.Error("audit: ошибка отправки события наблюдателю",
+				zap.Error(err),
+			)
+		}
+	}()
+}
+
 type LocalAuditor struct {
 	file   *os.File
 	writer *bufio.Writer
@@ -127,20 +156,24 @@ func (rw *responseWriterDecorator) WriteHeader(code int) {
 }
 
 func RequestAuditor(ctx context.Context, cfg *config.Config, logger *zap.Logger) func(http.Handler) http.Handler {
-	var observers []AuditObserver
+	maxConc := cfg.AuditMaxConcurrent
+	if maxConc <= 0 {
+		maxConc = 10
+	}
+	var observers []*observerWithSemaphore
 
 	if cfg.AuditFile != "" {
 		la, err := NewLocalAuditor(cfg.AuditFile)
 		if err != nil {
 			logger.Error("RequestAuditor: failed to create LocalAuditor: %v", zap.Error(err))
 		} else {
-			observers = append(observers, la)
+			observers = append(observers, newObserverWithSemaphore(la, maxConc))
 			logger.Debug("Local request auditor added", zap.String("AuditFile", cfg.AuditFile))
 		}
 	}
 
 	if cfg.AuditURL != "" {
-		observers = append(observers, NewRemoteAuditor(cfg.AuditURL))
+		observers = append(observers, newObserverWithSemaphore(NewRemoteAuditor(cfg.AuditURL), maxConc))
 		logger.Debug("Remote request auditor added", zap.String("AuditURL", cfg.AuditURL))
 	}
 
@@ -207,7 +240,7 @@ func RequestAuditor(ctx context.Context, cfg *config.Config, logger *zap.Logger)
 			)
 
 			for _, obs := range observers {
-				go obs.Notify(ctx, event)
+				obs.notify(ctx, event, logger)
 			}
 		})
 	}
