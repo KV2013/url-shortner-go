@@ -34,7 +34,7 @@ func BenchmarkCreate(b *testing.B) {
 	h := New(mockService, nil, benchCfg, benchLogger)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		body := strings.NewReader("http://example.com")
 		req := httptest.NewRequest(http.MethodPost, "/", body)
 		rec := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func BenchmarkAPICreate(b *testing.B) {
 	h := New(mockService, nil, benchCfg, benchLogger)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		body := strings.NewReader(`{"url":"http://example.com"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 		rec := httptest.NewRecorder()
@@ -91,7 +91,7 @@ func BenchmarkAPICreateBatch(b *testing.B) {
 		`]`
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		body := strings.NewReader(batchBody)
 		req := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", body)
 		rec := httptest.NewRecorder()
@@ -122,7 +122,7 @@ func BenchmarkAPICreateBatch_Size(b *testing.B) {
 			batchBody := buildBatchBody(sz)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				body := strings.NewReader(batchBody)
 				req := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", body)
 				rec := httptest.NewRecorder()
@@ -160,7 +160,7 @@ func BenchmarkRedirect(b *testing.B) {
 	h := New(mockService, nil, benchCfg, benchLogger)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		req := httptest.NewRequest(http.MethodGet, "/abc123", nil)
 		req.SetPathValue("id", "abc123")
 		rec := httptest.NewRecorder()
@@ -186,7 +186,7 @@ func BenchmarkGetUserURLs(b *testing.B) {
 	ctx := context.WithValue(context.Background(), middleware.UserIDContextKey, "user-1")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil).WithContext(ctx)
 		rec := httptest.NewRecorder()
 		h.GetUserURLs(rec, req)
@@ -208,7 +208,7 @@ func BenchmarkAPIDeleteURLs(b *testing.B) {
 	ctx := context.WithValue(context.Background(), middleware.UserIDContextKey, "user-1")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		body := strings.NewReader(`["abc","def","ghi","jkl","mno"]`)
 		req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", body).WithContext(ctx)
 		rec := httptest.NewRecorder()
