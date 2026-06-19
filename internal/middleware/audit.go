@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/KV2013/url-shortner-go/internal/config"
+	"github.com/hashicorp/go-retryablehttp"
 	"go.uber.org/zap"
 )
 
@@ -84,9 +85,13 @@ type RemoteAuditor struct {
 }
 
 func NewRemoteAuditor(url string) *RemoteAuditor {
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.HTTPClient.Timeout = 10 * time.Second
+
 	return &RemoteAuditor{
 		url:    url,
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: retryClient.StandardClient(),
 	}
 }
 
