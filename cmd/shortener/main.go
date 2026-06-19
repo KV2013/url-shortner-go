@@ -41,7 +41,7 @@ func main() {
 
 	repo, repoErr := repository.New(config, Logger)
 	if repoErr != nil {
-		Logger.Fatal("Ошибка при создании репозитория")
+		Logger.Fatal("Ошибка при создании репозитория", zap.Error(repoErr))
 	}
 	defer repo.Close()
 
