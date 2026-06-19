@@ -27,7 +27,6 @@ func acquireGzipWriter(w io.Writer) *gzip.Writer {
 }
 
 func releaseGzipWriter(gw *gzip.Writer) {
-	gw.Close()
 	gzipWriterPool.Put(gw)
 }
 
