@@ -1,9 +1,19 @@
+// URL Shortener — сервис сокращения ссылок.
+//
+// Принимает длинные URL и генерирует короткие идентификаторы для перенаправления.
+// Поддерживает три типа хранилища: PostgreSQL, файл на диске и in-memory.
+// Включает JWT-аутентификацию, gzip-сжатие, аудит-логирование и сбор метрик pprof.
+//
+// Запуск:
+//
+//	go run ./cmd/shortener/ -d "postgres://..." -a :8080 -p
 package main
 
 import (
 	"context"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,13 +41,13 @@ func main() {
 
 	repo, repoErr := repository.New(config, Logger)
 	if repoErr != nil {
-		Logger.Fatal("Ошибка при создании репозитория")
+		Logger.Fatal("Ошибка при создании репозитория", zap.Error(repoErr))
 	}
 	defer repo.Close()
 
 	urlService := service.NewURLService(repo, Logger)
 	handler := handler.New(urlService, repo, config, Logger)
-	mux := router.Init(handler, Logger, config)
+	mux := router.Init(context.Background(), handler, Logger, config)
 
 	srv := &http.Server{
 		Addr:         config.ServerAddress,
@@ -54,6 +64,15 @@ func main() {
 			Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
 		}
 	}()
+
+	if config.EnablePprof {
+		go func() {
+			Logger.Info("pprof сервер запущен", zap.String("addr", ":8082"))
+			if err := http.ListenAndServe(":8082", nil); err != nil {
+				Logger.Error("ошибка pprof сервера", zap.Error(err))
+			}
+		}()
+	}
 
 	// Ожидаем сигналов для graceful shutdown
 	quit := make(chan os.Signal, 1)

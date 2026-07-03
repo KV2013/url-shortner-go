@@ -53,20 +53,22 @@ func (r *SQLXRepository) runMigrations() error {
 		return fmt.Errorf("не удалось применить миграции: %w", err)
 	}
 
+	r.logger.Debug("Миграции обработаны")
+
 	return nil
 }
 
 func (r *SQLXRepository) GetByID(ctx context.Context, id string) (*model.URL, bool) {
 	var url model.URL
 	err := r.db.GetContext(ctx, &url, `
-		SELECT short_url AS short, original_url AS original, user_id, is_deleted
+		SELECT short_url AS short, original_url AS original, user_id, deleted_at
 		FROM urls
 		WHERE short_url = $1
 	`, id)
 	if err != nil {
 		return nil, false
 	}
-	if url.DeletedFlag {
+	if url.DeletedAt != nil {
 		r.logger.Debug("URL удалён", zap.String("id", id), zap.String("url", url.Original))
 	}
 
@@ -79,7 +81,7 @@ func (r *SQLXRepository) GetAllByUserID(ctx context.Context, userID string) ([]m
 		SELECT short_url AS short, original_url AS original, user_id
 		FROM urls
 		WHERE user_id = $1
-		AND is_deleted = FALSE
+		AND deleted_at IS NULL
 	`, userID)
 	if err != nil {
 		return nil, err
@@ -124,7 +126,7 @@ func (r *SQLXRepository) SaveMany(ctx context.Context, urls []*model.URL) error 
 		WITH ins AS (
 			INSERT INTO urls (short_url, original_url, user_id)
 			VALUES ($1, $2, $3)
-			ON CONFLICT (original_url) DO NOTHING
+			ON CONFLICT (original_url, deleted_at) DO NOTHING
 			RETURNING short_url, original_url, user_id
 		)
 		SELECT short_url AS short, original_url AS original, user_id, FALSE AS conflicted
@@ -181,7 +183,7 @@ func (r *SQLXRepository) DeleteUserURLs(ctx context.Context, userID string, urls
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url IN %s AND is_deleted = FALSE",
+		"UPDATE urls SET is_deleted = TRUE, deleted_at = NOW() WHERE user_id = $1 AND short_url IN %s AND deleted_at IS NULL",
 		inSQL,
 	)
 	_, err := r.db.ExecContext(ctx, query, args...)

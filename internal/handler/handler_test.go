@@ -492,3 +492,176 @@ func TestAPIDeleteURLs(t *testing.T) {
 		})
 	}
 }
+
+func TestAPICreateBatch(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		response    string
+	}
+
+	tests := []struct {
+		name           string
+		userID         string
+		body           string
+		originalURLs   []string
+		savedURLs      []model.URL
+		saveManyErr    error
+		config         *config.Config
+		want           want
+		expectSaveMany bool
+	}{
+		{
+			name:         "201 Created - batch with multiple items",
+			userID:       "user-1",
+			body:         `[{"correlation_id":"1","original_url":"https://example.com/1"},{"correlation_id":"2","original_url":"https://example.com/2"}]`,
+			originalURLs: []string{"https://example.com/1", "https://example.com/2"},
+			savedURLs: []model.URL{
+				{Short: "abc123", Original: "https://example.com/1"},
+				{Short: "def456", Original: "https://example.com/2"},
+			},
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			expectSaveMany: true,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `[{"correlation_id":"1","short_url":"http://localhost:8080/abc123"},{"correlation_id":"2","short_url":"http://localhost:8080/def456"}]`,
+			},
+		},
+		{
+			name:         "201 Created - single item",
+			userID:       "user-1",
+			body:         `[{"correlation_id":"0","original_url":"https://example.com"}]`,
+			originalURLs: []string{"https://example.com"},
+			savedURLs: []model.URL{
+				{Short: "xyz789", Original: "https://example.com"},
+			},
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			expectSaveMany: true,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `[{"correlation_id":"0","short_url":"http://localhost:8080/xyz789"}]`,
+			},
+		},
+		{
+			name:         "201 Created - with different baseURL",
+			userID:       "user-1",
+			body:         `[{"correlation_id":"1","original_url":"https://example.com/1"}]`,
+			originalURLs: []string{"https://example.com/1"},
+			savedURLs: []model.URL{
+				{Short: "abc123", Original: "https://example.com/1"},
+			},
+			config: &config.Config{
+				BaseURL: "https://foo.bar:45000",
+			},
+			expectSaveMany: true,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `[{"correlation_id":"1","short_url":"https://foo.bar:45000/abc123"}]`,
+			},
+		},
+		{
+			name:           "400 Bad Request - invalid JSON",
+			userID:         "user-1",
+			body:           `not-json`,
+			expectSaveMany: false,
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name:           "400 Bad Request - empty JSON array",
+			userID:         "user-1",
+			body:           `[]`,
+			originalURLs:   []string{},
+			savedURLs:      []model.URL{},
+			expectSaveMany: true,
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    `[]`,
+			},
+		},
+		{
+			name:         "400 Bad Request - save error",
+			userID:       "user-1",
+			body:         `[{"correlation_id":"1","original_url":"https://example.com/1"}]`,
+			originalURLs: []string{"https://example.com/1"},
+			saveManyErr:  errors.New("db error"),
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			expectSaveMany: true,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name:         "409 Conflict - URL already exists",
+			userID:       "user-1",
+			body:         `[{"correlation_id":"1","original_url":"https://example.com/1"}]`,
+			originalURLs: []string{"https://example.com/1"},
+			saveManyErr: &model.ErrURLAlreadyExists{
+				URL: model.URL{Short: "existing", Original: "https://example.com/1"},
+			},
+			config: &config.Config{
+				BaseURL: "http://localhost:8080",
+			},
+			expectSaveMany: true,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusConflict,
+			},
+		},
+	}
+
+	Logger, loggerErr := logger.New("debug")
+	if loggerErr != nil {
+		t.Fatalf("не удалось создать логгер: %v", loggerErr)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+
+			if tt.expectSaveMany {
+				mockService.EXPECT().
+					SaveManyURL(gomock.Any(), tt.originalURLs, tt.userID).
+					Return(tt.savedURLs, tt.saveManyErr)
+			}
+
+			h := New(mockService, nil, tt.config, Logger)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", strings.NewReader(tt.body))
+			req = req.WithContext(ctxWithUserID(tt.userID))
+			res := httptest.NewRecorder()
+
+			h.APICreateBatch(res, req)
+
+			assert.Equal(t, res.Code, tt.want.statusCode)
+			if tt.want.contentType != "" {
+				assert.Equal(t, res.Header().Get("Content-Type"), tt.want.contentType)
+			}
+			if tt.want.response != "" {
+				actualResponse := strings.TrimSpace(res.Body.String())
+				assert.Equal(t, actualResponse, tt.want.response)
+			}
+		})
+	}
+}
