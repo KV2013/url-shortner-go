@@ -19,6 +19,7 @@ type CreateURLResponse struct {
 	Result string `json:"result"`
 }
 
+// generate:reset
 type APIErrorResponse struct {
 	Error string `json:"error"`
 }

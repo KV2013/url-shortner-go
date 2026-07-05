@@ -11,3 +11,10 @@ func (u *URL) Reset() {
 	u.UserID = ""
 	u.DeletedFlag = false
 }
+
+func (a *APIErrorResponse) Reset() {
+	if a == nil {
+		return
+	}
+	a.Error = ""
+}
