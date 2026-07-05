@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// generate:reset
 type URL struct {
 	Original    string     `json:"original_url" db:"original"`
 	Short       string     `json:"short_url"    db:"short"`
