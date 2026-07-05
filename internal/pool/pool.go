@@ -1,9 +1,6 @@
 package pool
 
-import (
-	"reflect"
-	"sync"
-)
+import "sync"
 
 type Resetter interface {
 	Reset()
@@ -13,18 +10,9 @@ type Pool[T Resetter] struct {
 	p sync.Pool
 }
 
-func New[T Resetter]() *Pool[T] {
+func New[T Resetter](fn func() T) *Pool[T] {
 	return &Pool[T]{
-		p: sync.Pool{
-			New: func() any {
-				var zero T
-				rt := reflect.TypeOf(&zero).Elem()
-				if rt.Kind() == reflect.Pointer {
-					return reflect.New(rt.Elem()).Interface()
-				}
-				return reflect.New(rt).Elem().Interface()
-			},
-		},
+		p: sync.Pool{New: func() any { return fn() }},
 	}
 }
 
