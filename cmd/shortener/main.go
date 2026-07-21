@@ -11,6 +11,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -28,7 +29,15 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
+
+	printBuildInfo()
 
 	config, cfgErr := config.NewConfig()
 	if cfgErr != nil {
@@ -89,4 +98,17 @@ func main() {
 	}
 
 	Logger.Info("Сервер успешно остановлен")
+}
+
+func nA(s string) string {
+	if s == "" {
+		return "N/A"
+	}
+	return s
+}
+
+func printBuildInfo() {
+	fmt.Printf("Build version: %s\n", nA(buildVersion))
+	fmt.Printf("Build date: %s\n", nA(buildDate))
+	fmt.Printf("Build commit: %s\n", nA(buildCommit))
 }
