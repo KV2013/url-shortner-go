@@ -12,6 +12,7 @@ type Config struct {
 	AuditFile          string `env:"AUDIT_FILE"`
 	AuditURL           string `env:"AUDIT_URL"`
 	EnablePprof        bool   `env:"ENABLE_PPROF"`
+	EnableHTTPS        bool   `env:"ENABLE_HTTPS"`
 	AuditMaxConcurrent int    `env:"AUDIT_MAX_CONCURRENT"`
 }
 
@@ -58,6 +59,9 @@ func NewConfig() (*Config, error) {
 	}
 	if flagEnablePprof {
 		cfg.EnablePprof = true
+	}
+	if flagEnableHTTPS {
+		cfg.EnableHTTPS = true
 	}
 
 	return &cfg, nil
