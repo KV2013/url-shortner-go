@@ -12,11 +12,13 @@ import (
 	"time"
 )
 
+// CertPaths содержит пути к TLS сертификату и ключу.
 type CertPaths struct {
 	CertPath string
 	KeyPath  string
 }
 
+// ProvideCertAndKey генерирует TLS сертификат и ключ, если они не существуют.
 func ProvideCertAndKey() (CertPaths, error) {
 	certDir := "cert"
 	certPath := filepath.Join(certDir, "cert.pem")
