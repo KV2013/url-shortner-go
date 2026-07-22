@@ -42,7 +42,7 @@ func main() {
 
 	config, cfgErr := config.NewConfig()
 	if cfgErr != nil {
-		log.Fatal("Ошибка при сборке конфига")
+		log.Fatal("Ошибка при сборке конфига", zap.Error(cfgErr))
 	}
 	Logger, loggerErr := logger.New(config.LogLevel)
 	if loggerErr != nil {
