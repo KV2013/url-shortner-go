@@ -1,8 +1,9 @@
 package tlscert
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"math/big"
@@ -34,7 +35,7 @@ func ProvideCertAndKey() (CertPaths, error) {
 		return CertPaths{}, err
 	}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return CertPaths{}, err
 	}
@@ -68,7 +69,11 @@ func ProvideCertAndKey() (CertPaths, error) {
 		return CertPaths{}, err
 	}
 	defer keyFile.Close()
-	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}); err != nil {
+	keyDER, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return CertPaths{}, err
+	}
+	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyDER}); err != nil {
 		return CertPaths{}, err
 	}
 
