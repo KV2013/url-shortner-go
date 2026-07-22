@@ -99,7 +99,7 @@ func main() {
 
 	// Ожидаем сигналов для graceful shutdown
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-quit
 	Logger.Info("Получен сигнал завершения. Начинаем graceful shutdown...")
 
