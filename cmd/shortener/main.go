@@ -67,26 +67,24 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	if config.EnableHTTPS {
-		certPaths, err := tlscert.ProvideCertAndKey()
-		if err != nil {
-			Logger.Fatal("Не удалось сгенерировать TLS сертификат", zap.Error(err))
-		}
+	go func() {
+		if config.EnableHTTPS {
+			certPaths, err := tlscert.ProvideCertAndKey()
+			if err != nil {
+				Logger.Fatal("Не удалось сгенерировать TLS сертификат", zap.Error(err))
+			}
 
-		go func() {
 			Logger.Info("Сервер запущен (HTTPS)", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
 			if err := srv.ListenAndServeTLS(certPaths.CertPath, certPaths.KeyPath); err != nil && err != http.ErrServerClosed {
 				Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
 			}
-		}()
-	} else {
-		go func() {
+		} else {
 			Logger.Info("Сервер запущен", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
 			}
-		}()
-	}
+		}
+	}()
 
 	if config.EnablePprof {
 		go func() {
