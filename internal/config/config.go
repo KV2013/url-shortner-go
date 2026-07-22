@@ -3,34 +3,49 @@ package config
 import "github.com/caarlos0/env/v6"
 
 type Config struct {
-	ServerAddress      string `env:"SERVER_ADDRESS"`
-	BaseURL            string `env:"BASE_URL"`
-	LogLevel           string `env:"LOG_LEVEL"`
-	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN        string `env:"DATABASE_DSN"`
-	JWTSecretKey       string `env:"JWT_SECRET_KEY"`
-	AuditFile          string `env:"AUDIT_FILE"`
-	AuditURL           string `env:"AUDIT_URL"`
-	EnablePprof        bool   `env:"ENABLE_PPROF"`
-	AuditMaxConcurrent int    `env:"AUDIT_MAX_CONCURRENT"`
+	ServerAddress      string `env:"SERVER_ADDRESS"      json:"server_address"`
+	BaseURL            string `env:"BASE_URL"            json:"base_url"`
+	LogLevel           string `env:"LOG_LEVEL"           json:"log_level"`
+	FileStoragePath    string `env:"FILE_STORAGE_PATH"   json:"file_storage_path"`
+	DatabaseDSN        string `env:"DATABASE_DSN"        json:"database_dsn"`
+	JWTSecretKey       string `env:"JWT_SECRET_KEY"      json:"jwt_secret_key"`
+	AuditFile          string `env:"AUDIT_FILE"          json:"audit_file"`
+	AuditURL           string `env:"AUDIT_URL"           json:"audit_url"`
+	EnablePprof        bool   `env:"ENABLE_PPROF"        json:"enable_pprof"`
+	EnableHTTPS        bool   `env:"ENABLE_HTTPS"        json:"enable_https"`
+	AuditMaxConcurrent int    `env:"AUDIT_MAX_CONCURRENT" json:"audit_max_concurrent"`
 }
 
 func NewConfig() (*Config, error) {
 
-	cfg := Config{
-		ServerAddress:      "localhost:8080",
-		BaseURL:            "http://localhost:8080",
-		LogLevel:           "info",
-		JWTSecretKey:       "default-secret-change-me",
-		AuditMaxConcurrent: 10,
+	parseFlags()
+
+	cfg := Config{}
+
+	if err := LoadConfigFile(&cfg); err != nil {
+		return nil, err
+	}
+
+	if cfg.ServerAddress == "" {
+		cfg.ServerAddress = "localhost:8080"
+	}
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = "http://localhost:8080"
+	}
+	if cfg.LogLevel == "" {
+		cfg.LogLevel = "info"
+	}
+	if cfg.JWTSecretKey == "" {
+		cfg.JWTSecretKey = "default-secret-change-me"
+	}
+	if cfg.AuditMaxConcurrent == 0 {
+		cfg.AuditMaxConcurrent = 10
 	}
 
 	err := env.Parse(&cfg)
 	if err != nil {
 		return nil, err
 	}
-
-	parseFlags()
 
 	if flagServerAddr != "" {
 		cfg.ServerAddress = flagServerAddr
@@ -58,6 +73,9 @@ func NewConfig() (*Config, error) {
 	}
 	if flagEnablePprof {
 		cfg.EnablePprof = true
+	}
+	if flagEnableHTTPS {
+		cfg.EnableHTTPS = true
 	}
 
 	return &cfg, nil

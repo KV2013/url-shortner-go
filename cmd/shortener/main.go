@@ -26,6 +26,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/repository"
 	"github.com/KV2013/url-shortner-go/internal/router"
 	"github.com/KV2013/url-shortner-go/internal/service"
+	"github.com/KV2013/url-shortner-go/internal/tlscert"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +42,7 @@ func main() {
 
 	config, cfgErr := config.NewConfig()
 	if cfgErr != nil {
-		log.Fatal("Ошибка при сборке конфига")
+		log.Fatal("Ошибка при сборке конфига", zap.Error(cfgErr))
 	}
 	Logger, loggerErr := logger.New(config.LogLevel)
 	if loggerErr != nil {
@@ -66,11 +67,22 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Запускаем сервер в горутине
 	go func() {
-		Logger.Info("Сервер запущен", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
+		if config.EnableHTTPS {
+			certPaths, err := tlscert.ProvideCertAndKey()
+			if err != nil {
+				Logger.Fatal("Не удалось сгенерировать TLS сертификат", zap.Error(err))
+			}
+
+			Logger.Info("Сервер запущен (HTTPS)", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
+			if err := srv.ListenAndServeTLS(certPaths.CertPath, certPaths.KeyPath); err != nil && err != http.ErrServerClosed {
+				Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
+			}
+		} else {
+			Logger.Info("Сервер запущен", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
+			}
 		}
 	}()
 
@@ -85,7 +97,7 @@ func main() {
 
 	// Ожидаем сигналов для graceful shutdown
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-quit
 	Logger.Info("Получен сигнал завершения. Начинаем graceful shutdown...")
 

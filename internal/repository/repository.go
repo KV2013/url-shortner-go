@@ -23,10 +23,13 @@ type Repository interface {
 
 func New(cfg *config.Config, logger *zap.Logger) (Repository, error) {
 	if cfg.DatabaseDSN != "" {
+		logger.Debug("creating sqlx repository")
 		return sqlxrepo.NewRepository(cfg.DatabaseDSN, logger)
 	}
 	if cfg.FileStoragePath != "" {
+		logger.Debug("creating file repository")
 		return file.NewRepository(cfg.FileStoragePath, logger)
 	}
+	logger.Debug("creating inmemory repository")
 	return inmemory.NewRepository()
 }

@@ -13,6 +13,8 @@ var flagJWTSecretKey string
 var flagAuditFile string
 var flagAuditURL string
 var flagEnablePprof bool
+var flagEnableHTTPS bool
+var flagConfigPath string
 
 func parseFlags() {
 	if flag.Parsed() {
@@ -28,5 +30,7 @@ func parseFlags() {
 	flag.StringVarP(&flagAuditFile, "audit-file", "", "", "path to audit log file")
 	flag.StringVarP(&flagAuditURL, "audit-url", "", "", "URL of remote audit server")
 	flag.BoolVarP(&flagEnablePprof, "enable-pprof", "p", false, "enable pprof debug server on :8082")
+	flag.BoolVarP(&flagEnableHTTPS, "enable-https", "s", false, "enable HTTPS with self-signed certificate")
+	flag.StringVarP(&flagConfigPath, "config", "c", "", "path to JSON config file")
 	flag.Parse()
 }
