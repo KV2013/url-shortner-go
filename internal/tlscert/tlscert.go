@@ -13,31 +13,39 @@ import (
 	"time"
 )
 
-// CertPaths содержит пути к TLS сертификату и ключу.
 type CertPaths struct {
 	CertPath string
 	KeyPath  string
 }
 
-// ProvideCertAndKey генерирует TLS сертификат и ключ, если они не существуют.
-func ProvideCertAndKey() (CertPaths, error) {
+func ProvideCertAndKey() (paths CertPaths, err error) {
 	certDir := "cert"
 	certPath := filepath.Join(certDir, "cert.pem")
 	keyPath := filepath.Join(certDir, "key.pem")
 
-	if _, err := os.Stat(certPath); err == nil {
-		if _, err := os.Stat(keyPath); err == nil {
-			return CertPaths{CertPath: certPath, KeyPath: keyPath}, nil
+	if _, statErr := os.Stat(certPath); statErr == nil {
+		if _, statErr := os.Stat(keyPath); statErr == nil {
+			paths.CertPath = certPath
+			paths.KeyPath = keyPath
+			return
 		}
 	}
 
-	if err := os.MkdirAll(certDir, 0755); err != nil {
-		return CertPaths{}, err
+	if err = os.MkdirAll(certDir, 0755); err != nil {
+		return
 	}
 
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return CertPaths{}, err
+	defer func() {
+		if err != nil {
+			os.Remove(certPath)
+			os.Remove(keyPath)
+		}
+	}()
+
+	privateKey, keyErr := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if keyErr != nil {
+		err = keyErr
+		return
 	}
 
 	template := &x509.Certificate{
@@ -50,32 +58,45 @@ func ProvideCertAndKey() (CertPaths, error) {
 		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
-	if err != nil {
-		return CertPaths{}, err
+	certDER, certErr := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+	if certErr != nil {
+		err = certErr
+		return
 	}
 
-	certFile, err := os.Create(certPath)
-	if err != nil {
-		return CertPaths{}, err
+	certFile, ferr := os.Create(certPath)
+	if ferr != nil {
+		err = ferr
+		return
 	}
-	defer certFile.Close()
-	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
-		return CertPaths{}, err
+	if err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		certFile.Close()
+		return
 	}
-
-	keyFile, err := os.Create(keyPath)
-	if err != nil {
-		return CertPaths{}, err
-	}
-	defer keyFile.Close()
-	keyDER, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return CertPaths{}, err
-	}
-	if err := pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyDER}); err != nil {
-		return CertPaths{}, err
+	if err = certFile.Close(); err != nil {
+		return
 	}
 
-	return CertPaths{CertPath: certPath, KeyPath: keyPath}, nil
+	keyFile, ferr := os.Create(keyPath)
+	if ferr != nil {
+		err = ferr
+		return
+	}
+	keyDER, kerr := x509.MarshalECPrivateKey(privateKey)
+	if kerr != nil {
+		err = kerr
+		keyFile.Close()
+		return
+	}
+	if err = pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}); err != nil {
+		keyFile.Close()
+		return
+	}
+	if err = keyFile.Close(); err != nil {
+		return
+	}
+
+	paths.CertPath = certPath
+	paths.KeyPath = keyPath
+	return
 }
