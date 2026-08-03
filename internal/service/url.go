@@ -18,6 +18,7 @@ type URLRepository interface {
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	DeleteUserURLs(ctx context.Context, userID string, urls []string) error
+	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
 type DeleteJob struct {
@@ -111,6 +112,10 @@ func (s *URLService) DeleteURLs(ctx context.Context, shortUrls []string, userID 
 	s.delCh <- job
 
 	return nil
+}
+
+func (s *URLService) GetStats(ctx context.Context) (int, int, error) {
+	return s.urlRepository.GetStats(ctx)
 }
 
 func (s *URLService) startDeleteQueue() {

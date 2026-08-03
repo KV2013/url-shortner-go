@@ -15,6 +15,7 @@ func Init(ctx context.Context, handler *handler.URLHandler, logger *zap.Logger, 
 	r := chi.NewRouter()
 	r.Use(middleware.ZapLogger(logger))
 	r.Use(middleware.GzipCompression)
+	r.Use(middleware.TrustedSubnet(cfg, logger))
 	r.Use(middleware.AuthJWT(cfg, logger))
 	r.Use(middleware.RequestAuditor(ctx, cfg, logger))
 	r.Post("/", handler.Create)
@@ -26,6 +27,7 @@ func Init(ctx context.Context, handler *handler.URLHandler, logger *zap.Logger, 
 	r.Post("/api/shorten/batch", handler.APICreateBatch)
 	r.Get("/api/user/urls", handler.GetUserURLs)
 	r.Delete("/api/user/urls", handler.APIDeleteURLs)
+	r.Get("/api/internal/stats", handler.Stats)
 
 	return r
 }

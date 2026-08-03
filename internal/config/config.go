@@ -1,6 +1,11 @@
 package config
 
-import "github.com/caarlos0/env/v6"
+import (
+	"fmt"
+	"net"
+
+	"github.com/caarlos0/env/v6"
+)
 
 type Config struct {
 	ServerAddress      string `env:"SERVER_ADDRESS"      json:"server_address"`
@@ -13,6 +18,7 @@ type Config struct {
 	AuditURL           string `env:"AUDIT_URL"           json:"audit_url"`
 	EnablePprof        bool   `env:"ENABLE_PPROF"        json:"enable_pprof"`
 	EnableHTTPS        bool   `env:"ENABLE_HTTPS"        json:"enable_https"`
+	TrustedSubnet      string `env:"TRUSTED_SUBNET"      json:"trusted_subnet"`
 	AuditMaxConcurrent int    `env:"AUDIT_MAX_CONCURRENT" json:"audit_max_concurrent"`
 }
 
@@ -76,6 +82,15 @@ func NewConfig() (*Config, error) {
 	}
 	if flagEnableHTTPS {
 		cfg.EnableHTTPS = true
+	}
+	if flagTrustedSubnet != "" {
+		cfg.TrustedSubnet = flagTrustedSubnet
+	}
+
+	if cfg.TrustedSubnet != "" {
+		if _, _, err := net.ParseCIDR(cfg.TrustedSubnet); err != nil {
+			return nil, fmt.Errorf("некорректный trusted_subnet: %w", err)
+		}
 	}
 
 	return &cfg, nil

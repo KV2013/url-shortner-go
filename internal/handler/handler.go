@@ -24,6 +24,7 @@ type URLService interface {
 	GetByID(ctx context.Context, id string) (*model.URL, error)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	DeleteURLs(ctx context.Context, ids []string, userID string) error
+	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
 func userIDFromContext(ctx context.Context) string {
@@ -367,4 +368,23 @@ func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusAccepted)
 
+}
+
+func (h *URLHandler) Stats(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	urls, users, err := h.urlService.GetStats(req.Context())
+	if err != nil {
+		h.logger.Error("ошибка при получении статистики", zap.Error(err))
+		h.writeJSONError(res, "ошибка при получении статистики", http.StatusInternalServerError)
+		return
+	}
+
+	body, err := json.Marshal(model.StatsResponse{URLs: urls, Users: users})
+	if err != nil {
+		h.writeJSONError(res, "ошибка сериализации", http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	_, _ = res.Write(body)
 }

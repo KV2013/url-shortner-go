@@ -665,3 +665,65 @@ func TestAPICreateBatch(t *testing.T) {
 		})
 	}
 }
+
+func TestStats(t *testing.T) {
+	tests := []struct {
+		name         string
+		stubURLs     int
+		stubUsers    int
+		stubErr      error
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "200 OK - empty DB returns zero counts",
+			stubURLs:     0,
+			stubUsers:    0,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"urls":0,"users":0}`,
+		},
+		{
+			name:         "200 OK - 3 URLs from 2 users",
+			stubURLs:     3,
+			stubUsers:    2,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"urls":3,"users":2}`,
+		},
+		{
+			name:         "200 OK - 2 URLs from 2 users (one user's URL deleted)",
+			stubURLs:     2,
+			stubUsers:    2,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"urls":2,"users":2}`,
+		},
+		{
+			name:         "500 Internal Server Error - service error",
+			stubErr:      errors.New("db error"),
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	Logger, _ := logger.New("debug")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockURLService(ctrl)
+			mockService.EXPECT().
+				GetStats(gomock.Any()).
+				Return(tt.stubURLs, tt.stubUsers, tt.stubErr)
+
+			h := New(mockService, nil, &config.Config{}, Logger)
+			req := httptest.NewRequest(http.MethodGet, "/api/internal/stats", nil)
+			res := httptest.NewRecorder()
+
+			h.Stats(res, req)
+
+			assert.Equal(t, res.Code, tt.expectedCode)
+			if tt.expectedBody != "" {
+				assert.Equal(t, strings.TrimSpace(res.Body.String()), tt.expectedBody)
+			}
+		})
+	}
+}

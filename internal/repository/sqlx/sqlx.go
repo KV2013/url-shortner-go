@@ -191,6 +191,18 @@ func (r *SQLXRepository) DeleteUserURLs(ctx context.Context, userID string, urls
 	return err
 }
 
+func (r *SQLXRepository) GetStats(ctx context.Context) (int, int, error) {
+	var urls int
+	if err := r.db.GetContext(ctx, &urls, `SELECT COUNT(*) FROM urls WHERE deleted_at IS NULL`); err != nil {
+		return 0, 0, fmt.Errorf("ошибка получения количества URL: %w", err)
+	}
+	var users int
+	if err := r.db.GetContext(ctx, &users, `SELECT COUNT(DISTINCT user_id) FROM urls`); err != nil {
+		return 0, 0, fmt.Errorf("ошибка получения количества пользователей: %w", err)
+	}
+	return urls, users, nil
+}
+
 // placeholders генерирует строку плейсхолдеров: $start, $start+1, ..., $start+n-1
 func placeholders(start, n int) string {
 	if n <= 0 {

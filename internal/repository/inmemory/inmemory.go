@@ -80,6 +80,23 @@ func (r *InMemoryRepository) Save(_ context.Context, url *model.URL) error {
 	return nil
 }
 
+func (r *InMemoryRepository) GetStats(_ context.Context) (int, int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	urlsCount := 0
+	usersSet := make(map[string]struct{})
+	for _, url := range r.UrlsByID {
+		if !url.DeletedFlag {
+			urlsCount++
+		}
+		if url.UserID != "" {
+			usersSet[url.UserID] = struct{}{}
+		}
+	}
+	return urlsCount, len(usersSet), nil
+}
+
 func (r *InMemoryRepository) DeleteUserURLs(_ context.Context, userID string, urls []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

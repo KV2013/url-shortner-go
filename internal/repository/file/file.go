@@ -111,6 +111,31 @@ func (r *FileRepository) Close() error {
 	return r.file.Close()
 }
 
+func (r *FileRepository) GetStats(_ context.Context) (int, int, error) {
+	if _, err := r.file.Seek(0, 0); err != nil {
+		return 0, 0, err
+	}
+	scanner := bufio.NewScanner(r.file)
+	urlsCount := 0
+	usersSet := make(map[string]struct{})
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return 0, 0, err
+		}
+		var url model.URL
+		if err := json.Unmarshal(scanner.Bytes(), &url); err != nil {
+			continue
+		}
+		if !url.DeletedFlag {
+			urlsCount++
+		}
+		if url.UserID != "" {
+			usersSet[url.UserID] = struct{}{}
+		}
+	}
+	return urlsCount, len(usersSet), nil
+}
+
 func (r *FileRepository) DeleteUserURLs(_ context.Context, _ string, _ []string) error {
 	// TODO: дописать удаление URL из файла
 	return nil
