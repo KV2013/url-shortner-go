@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -20,14 +21,18 @@ import (
 	"syscall"
 	"time"
 
+	shortnerpb "github.com/KV2013/url-shortner-go/api/shortner"
 	"github.com/KV2013/url-shortner-go/internal/config"
 	"github.com/KV2013/url-shortner-go/internal/handler"
+	grpchandler "github.com/KV2013/url-shortner-go/internal/handler/grpc"
 	"github.com/KV2013/url-shortner-go/internal/logger"
+	"github.com/KV2013/url-shortner-go/internal/middleware"
 	"github.com/KV2013/url-shortner-go/internal/repository"
 	"github.com/KV2013/url-shortner-go/internal/router"
 	"github.com/KV2013/url-shortner-go/internal/service"
 	"github.com/KV2013/url-shortner-go/internal/tlscert"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -58,7 +63,6 @@ func main() {
 	urlService := service.NewURLService(repo, Logger)
 	handler := handler.New(urlService, repo, config, Logger)
 	mux := router.Init(context.Background(), handler, Logger, config)
-
 	srv := &http.Server{
 		Addr:         config.ServerAddress,
 		Handler:      mux,
@@ -66,6 +70,12 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
+
+	grpcHandler := grpchandler.New(urlService, config, Logger)
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.AuthJWTUnaryInterceptor(config, Logger)),
+	)
+	shortnerpb.RegisterShortenerServiceServer(grpcServer, grpcHandler)
 
 	go func() {
 		if config.EnableHTTPS {
@@ -95,6 +105,17 @@ func main() {
 		}()
 	}
 
+	go func() {
+		listener, err := net.Listen("tcp", config.GRPCPort)
+		if err != nil {
+			Logger.Fatal("Не удалось запустить gRPC сервер", zap.Error(err))
+		}
+		Logger.Info("gRPC сервер запущен", zap.String("grpcPort", config.GRPCPort))
+		if err := grpcServer.Serve(listener); err != nil {
+			Logger.Fatal("Не удалось запустить gRPC сервер", zap.Error(err))
+		}
+	}()
+
 	// Ожидаем сигналов для graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -108,6 +129,8 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		Logger.Fatal("Graceful shutdown не удался", zap.Error(err))
 	}
+
+	grpcServer.GracefulStop()
 
 	Logger.Info("Сервер успешно остановлен")
 }

@@ -20,6 +20,7 @@ type Config struct {
 	EnableHTTPS        bool   `env:"ENABLE_HTTPS"        json:"enable_https"`
 	TrustedSubnet      string `env:"TRUSTED_SUBNET"      json:"trusted_subnet"`
 	AuditMaxConcurrent int    `env:"AUDIT_MAX_CONCURRENT" json:"audit_max_concurrent"`
+	GRPCPort           string `env:"GRPC_PORT"            json:"grpc_port"`
 }
 
 func NewConfig() (*Config, error) {
@@ -46,6 +47,9 @@ func NewConfig() (*Config, error) {
 	}
 	if cfg.AuditMaxConcurrent == 0 {
 		cfg.AuditMaxConcurrent = 10
+	}
+	if cfg.GRPCPort == "" {
+		cfg.GRPCPort = ":9090"
 	}
 
 	err := env.Parse(&cfg)
@@ -85,6 +89,9 @@ func NewConfig() (*Config, error) {
 	}
 	if flagTrustedSubnet != "" {
 		cfg.TrustedSubnet = flagTrustedSubnet
+	}
+	if flagGRPCPort != "" {
+		cfg.GRPCPort = flagGRPCPort
 	}
 
 	if cfg.TrustedSubnet != "" {

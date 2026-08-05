@@ -16,6 +16,7 @@ var flagEnablePprof bool
 var flagEnableHTTPS bool
 var flagTrustedSubnet string
 var flagConfigPath string
+var flagGRPCPort string
 
 func parseFlags() {
 	if flag.Parsed() {
@@ -34,5 +35,6 @@ func parseFlags() {
 	flag.BoolVarP(&flagEnableHTTPS, "enable-https", "s", false, "enable HTTPS with self-signed certificate")
 	flag.StringVarP(&flagTrustedSubnet, "trusted-subnet", "t", "", "trusted subnet in CIDR notation")
 	flag.StringVarP(&flagConfigPath, "config", "c", "", "path to JSON config file")
+	flag.StringVarP(&flagGRPCPort, "grpc-port", "g", "", "gRPC server port")
 	flag.Parse()
 }
