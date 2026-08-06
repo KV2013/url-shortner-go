@@ -16,11 +16,6 @@ func TrustedSubnet(cfg *config.Config, logger *zap.Logger) func(next http.Handle
 				return
 			}
 
-			if r.URL.Path != "/api/internal/stats" {
-				next.ServeHTTP(w, r)
-				return
-			}
-
 			realIP := r.Header.Get("X-Real-IP")
 			if realIP == "" {
 				logger.Warn("запрос к /api/internal/stats без заголовка X-Real-IP")

@@ -33,6 +33,7 @@ import (
 	"github.com/KV2013/url-shortner-go/internal/tlscert"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -71,19 +72,31 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	var certPaths tlscert.CertPaths
+	if config.EnableHTTPS {
+		var err error
+		certPaths, err = tlscert.ProvideCertAndKey()
+		if err != nil {
+			Logger.Fatal("Не удалось сгенерировать TLS сертификат", zap.Error(err))
+		}
+	}
+
 	grpcHandler := grpchandler.New(urlService, config, Logger)
-	grpcServer := grpc.NewServer(
+	grpcOpts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(middleware.AuthJWTUnaryInterceptor(config, Logger)),
-	)
+	}
+	if config.EnableHTTPS {
+		creds, credsErr := credentials.NewServerTLSFromFile(certPaths.CertPath, certPaths.KeyPath)
+		if credsErr != nil {
+			Logger.Fatal("Не удалось создать TLS credentials для gRPC", zap.Error(credsErr))
+		}
+		grpcOpts = append(grpcOpts, grpc.Creds(creds))
+	}
+	grpcServer := grpc.NewServer(grpcOpts...)
 	shortnerpb.RegisterShortenerServiceServer(grpcServer, grpcHandler)
 
 	go func() {
 		if config.EnableHTTPS {
-			certPaths, err := tlscert.ProvideCertAndKey()
-			if err != nil {
-				Logger.Fatal("Не удалось сгенерировать TLS сертификат", zap.Error(err))
-			}
-
 			Logger.Info("Сервер запущен (HTTPS)", zap.String("serverAddress", config.ServerAddress), zap.String("logLevel", config.LogLevel))
 			if err := srv.ListenAndServeTLS(certPaths.CertPath, certPaths.KeyPath); err != nil && err != http.ErrServerClosed {
 				Logger.Fatal("Не удалось запустить сервер", zap.Error(err))
@@ -110,7 +123,11 @@ func main() {
 		if err != nil {
 			Logger.Fatal("Не удалось запустить gRPC сервер", zap.Error(err))
 		}
-		Logger.Info("gRPC сервер запущен", zap.String("grpcPort", config.GRPCPort))
+		if config.EnableHTTPS {
+			Logger.Info("gRPC сервер запущен (TLS)", zap.String("grpcPort", config.GRPCPort))
+		} else {
+			Logger.Info("gRPC сервер запущен", zap.String("grpcPort", config.GRPCPort))
+		}
 		if err := grpcServer.Serve(listener); err != nil {
 			Logger.Fatal("Не удалось запустить gRPC сервер", zap.Error(err))
 		}

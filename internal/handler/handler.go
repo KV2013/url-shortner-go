@@ -27,11 +27,6 @@ type URLService interface {
 	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
-func userIDFromContext(ctx context.Context) string {
-	id, _ := ctx.Value(middleware.UserIDContextKey).(string)
-	return id
-}
-
 // Pinger определяет контракт для проверки работоспособности хранилища.
 type Pinger interface {
 	Ping() error
@@ -80,7 +75,7 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	storedURL, err := h.urlService.SaveURL(ctx, reqURL, userIDFromContext(ctx))
+	storedURL, err := h.urlService.SaveURL(ctx, reqURL, middleware.UserIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -136,7 +131,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 		h.writeJSONError(res, "URL не задан", http.StatusBadRequest)
 		return
 	}
-	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL, userIDFromContext(req.Context()))
+	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL, middleware.UserIDFromContext(req.Context()))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -199,7 +194,7 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	}
 
 	ctx := req.Context()
-	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs, userIDFromContext(ctx))
+	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs, middleware.UserIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -289,7 +284,7 @@ func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
-	userID := userIDFromContext(req.Context())
+	userID := middleware.UserIDFromContext(req.Context())
 	if userID == "" {
 		res.WriteHeader(http.StatusUnauthorized)
 		return
@@ -334,7 +329,7 @@ func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
-	userID := userIDFromContext(req.Context())
+	userID := middleware.UserIDFromContext(req.Context())
 	if userID == "" {
 		res.WriteHeader(http.StatusUnauthorized)
 		return

@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type URLService interface {
@@ -36,17 +34,12 @@ func New(urlService URLService, config *config.Config, logger *zap.Logger) *Shor
 	}
 }
 
-func userIDFromContext(ctx context.Context) string {
-	id, _ := ctx.Value(middleware.UserIDContextKey).(string)
-	return id
-}
-
 func (h *ShortenerHandler) ShortenURL(ctx context.Context, req *shortnerpb.URLShortenRequest) (*shortnerpb.URLShortenResponse, error) {
 	if req.GetUrl() == "" {
 		return nil, status.Error(codes.InvalidArgument, "URL не задан")
 	}
 
-	storedURL, err := h.urlService.SaveURL(ctx, req.GetUrl(), userIDFromContext(ctx))
+	storedURL, err := h.urlService.SaveURL(ctx, req.GetUrl(), middleware.UserIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -57,9 +50,9 @@ func (h *ShortenerHandler) ShortenURL(ctx context.Context, req *shortnerpb.URLSh
 		return nil, status.Errorf(codes.Internal, "не удалось сохранить URL")
 	}
 
-	return &shortnerpb.URLShortenResponse{
-		Result: proto.String(h.config.BaseURL + "/" + storedURL.Short),
-	}, nil
+	resp := &shortnerpb.URLShortenResponse{}
+	resp.SetResult(h.config.BaseURL + "/" + storedURL.Short)
+	return resp, nil
 }
 
 func (h *ShortenerHandler) ExpandURL(ctx context.Context, req *shortnerpb.URLExpandRequest) (*shortnerpb.URLExpandResponse, error) {
@@ -77,13 +70,13 @@ func (h *ShortenerHandler) ExpandURL(ctx context.Context, req *shortnerpb.URLExp
 		return nil, status.Errorf(codes.Internal, "ошибка при получении URL")
 	}
 
-	return &shortnerpb.URLExpandResponse{
-		Result: proto.String(url.Original),
-	}, nil
+	resp := &shortnerpb.URLExpandResponse{}
+	resp.SetResult(url.Original)
+	return resp, nil
 }
 
-func (h *ShortenerHandler) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*shortnerpb.UserURLsResponse, error) {
-	userID := userIDFromContext(ctx)
+func (h *ShortenerHandler) ListUserURLs(ctx context.Context, _ *shortnerpb.ListUserURLsRequest) (*shortnerpb.UserURLsResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "пользователь не авторизован")
 	}
@@ -96,13 +89,13 @@ func (h *ShortenerHandler) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (
 
 	items := make([]*shortnerpb.URLData, 0, len(urls))
 	for _, u := range urls {
-		items = append(items, &shortnerpb.URLData{
-			ShortUrl:    proto.String(h.config.BaseURL + "/" + u.Short),
-			OriginalUrl: proto.String(u.Original),
-		})
+		item := &shortnerpb.URLData{}
+		item.SetShortUrl(h.config.BaseURL + "/" + u.Short)
+		item.SetOriginalUrl(u.Original)
+		items = append(items, item)
 	}
 
-	return &shortnerpb.UserURLsResponse{
-		Url: items,
-	}, nil
+	resp := &shortnerpb.UserURLsResponse{}
+	resp.SetUrl(items)
+	return resp, nil
 }
