@@ -46,6 +46,10 @@ func (s *exampleURLService) DeleteURLs(_ context.Context, _ []string, _ string) 
 	return nil
 }
 
+func (s *exampleURLService) GetStats(_ context.Context) (int, int, error) {
+	return 10, 5, nil
+}
+
 // ExampleURLHandler_Create демонстрирует создание короткой ссылки через POST /.
 // В теле запроса передаётся оригинальный URL как text/plain.
 func ExampleURLHandler_Create() {

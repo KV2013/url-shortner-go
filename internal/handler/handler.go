@@ -24,11 +24,7 @@ type URLService interface {
 	GetByID(ctx context.Context, id string) (*model.URL, error)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	DeleteURLs(ctx context.Context, ids []string, userID string) error
-}
-
-func userIDFromContext(ctx context.Context) string {
-	id, _ := ctx.Value(middleware.UserIDContextKey).(string)
-	return id
+	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
 // Pinger определяет контракт для проверки работоспособности хранилища.
@@ -79,7 +75,7 @@ func (h *URLHandler) Create(res http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	storedURL, err := h.urlService.SaveURL(ctx, reqURL, userIDFromContext(ctx))
+	storedURL, err := h.urlService.SaveURL(ctx, reqURL, middleware.UserIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -135,7 +131,7 @@ func (h *URLHandler) APICreate(res http.ResponseWriter, req *http.Request) {
 		h.writeJSONError(res, "URL не задан", http.StatusBadRequest)
 		return
 	}
-	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL, userIDFromContext(req.Context()))
+	storedURL, err := h.urlService.SaveURL(req.Context(), decoded.URL, middleware.UserIDFromContext(req.Context()))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -198,7 +194,7 @@ func (h *URLHandler) APICreateBatch(res http.ResponseWriter, req *http.Request) 
 	}
 
 	ctx := req.Context()
-	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs, userIDFromContext(ctx))
+	savedURLs, err := h.urlService.SaveManyURL(ctx, originalURLs, middleware.UserIDFromContext(ctx))
 	if err != nil {
 		var urlExists *model.ErrURLAlreadyExists
 		if errors.As(err, &urlExists) {
@@ -288,7 +284,7 @@ func (h *URLHandler) Ping(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
-	userID := userIDFromContext(req.Context())
+	userID := middleware.UserIDFromContext(req.Context())
 	if userID == "" {
 		res.WriteHeader(http.StatusUnauthorized)
 		return
@@ -333,7 +329,7 @@ func (h *URLHandler) GetUserURLs(res http.ResponseWriter, req *http.Request) {
 func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
-	userID := userIDFromContext(req.Context())
+	userID := middleware.UserIDFromContext(req.Context())
 	if userID == "" {
 		res.WriteHeader(http.StatusUnauthorized)
 		return
@@ -367,4 +363,23 @@ func (h *URLHandler) APIDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusAccepted)
 
+}
+
+func (h *URLHandler) Stats(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	urls, users, err := h.urlService.GetStats(req.Context())
+	if err != nil {
+		h.logger.Error("ошибка при получении статистики", zap.Error(err))
+		h.writeJSONError(res, "ошибка при получении статистики", http.StatusInternalServerError)
+		return
+	}
+
+	body, err := json.Marshal(model.StatsResponse{URLs: urls, Users: users})
+	if err != nil {
+		h.writeJSONError(res, "ошибка сериализации", http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	_, _ = res.Write(body)
 }

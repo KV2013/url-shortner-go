@@ -17,6 +17,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id string) (*model.URL, bool)
 	GetAllByUserID(ctx context.Context, userID string) ([]model.URL, error)
 	DeleteUserURLs(ctx context.Context, userID string, urls []string) error
+	GetStats(ctx context.Context) (urls int, users int, err error)
 	Ping() error
 	Close() error
 }

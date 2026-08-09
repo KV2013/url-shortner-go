@@ -50,6 +50,11 @@ func (e *ErrURLNotFound) Error() string {
 	return "URL не найден: " + e.Short
 }
 
+type StatsResponse struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}
+
 type ErrURLDeleted struct {
 	Short string
 }

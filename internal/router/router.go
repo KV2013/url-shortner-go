@@ -17,6 +17,7 @@ func Init(ctx context.Context, handler *handler.URLHandler, logger *zap.Logger, 
 	r.Use(middleware.GzipCompression)
 	r.Use(middleware.AuthJWT(cfg, logger))
 	r.Use(middleware.RequestAuditor(ctx, cfg, logger))
+
 	r.Post("/", handler.Create)
 	r.Get("/{id}", handler.Redirect)
 
@@ -26,6 +27,13 @@ func Init(ctx context.Context, handler *handler.URLHandler, logger *zap.Logger, 
 	r.Post("/api/shorten/batch", handler.APICreateBatch)
 	r.Get("/api/user/urls", handler.GetUserURLs)
 	r.Delete("/api/user/urls", handler.APIDeleteURLs)
+
+	r.Route("/api/internal/stats", func(r chi.Router) {
+		if cfg.TrustedSubnet != "" {
+			r.Use(middleware.TrustedSubnet(cfg, logger))
+		}
+		r.Get("/", handler.Stats)
+	})
 
 	return r
 }

@@ -14,7 +14,9 @@ var flagAuditFile string
 var flagAuditURL string
 var flagEnablePprof bool
 var flagEnableHTTPS bool
+var flagTrustedSubnet string
 var flagConfigPath string
+var flagGRPCPort string
 
 func parseFlags() {
 	if flag.Parsed() {
@@ -31,6 +33,8 @@ func parseFlags() {
 	flag.StringVarP(&flagAuditURL, "audit-url", "", "", "URL of remote audit server")
 	flag.BoolVarP(&flagEnablePprof, "enable-pprof", "p", false, "enable pprof debug server on :8082")
 	flag.BoolVarP(&flagEnableHTTPS, "enable-https", "s", false, "enable HTTPS with self-signed certificate")
+	flag.StringVarP(&flagTrustedSubnet, "trusted-subnet", "t", "", "trusted subnet in CIDR notation")
 	flag.StringVarP(&flagConfigPath, "config", "c", "", "path to JSON config file")
+	flag.StringVarP(&flagGRPCPort, "grpc-port", "g", "", "gRPC server port")
 	flag.Parse()
 }
